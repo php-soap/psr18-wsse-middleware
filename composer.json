@@ -32,19 +32,5 @@
         "php-http/mock-client": "^1.4",
         "symfony/http-client": "^5.3",
         "phpunit/phpunit": "^9.5"
-    },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../psr18-transport"
-        },
-        {
-            "type": "path",
-            "url": "../engine"
-        },
-        {
-            "type": "path",
-            "url": "../xml"
-        }
-    ]
+    }
 }
