@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace SoapTest\Psr18WsseMiddleware\Unit\Middleware;
 
@@ -15,7 +15,7 @@ use Soap\Xml\Xpath\EnvelopePreset;
 use VeeWee\Xml\Dom\Document;
 use VeeWee\Xml\Dom\Xpath;
 
-class WsaMiddleware2005Test extends TestCase
+final class WsaMiddleware2005Test extends TestCase
 {
     private PluginClient $client;
     private Client $mockClient;
@@ -28,49 +28,47 @@ class WsaMiddleware2005Test extends TestCase
         $this->client = new PluginClient($this->mockClient, [$this->middleware]);
     }
 
-    /**
-     * @test
-     */
-    function it_is_a_middleware()
+    
+    public function test_it_is_a_middleware()
     {
-        $this->assertInstanceOf(Plugin::class, $this->middleware);
+        static::assertInstanceOf(Plugin::class, $this->middleware);
     }
 
-    /**
-     * @test
-     */
-    function it_adds_wsa_to_the_request_xml()
+    
+    public function test_it_adds_wsa_to_the_request_xml()
     {
         $soapRequest = file_get_contents(FIXTURE_DIR . '/soap/empty-request.xml');
         $this->mockClient->addResponse($response = new Response(200));
-        $result = $this->client->sendRequest($request = new Request(
+        $result = $this->client->sendRequest(
+            $request = new Request(
             'POST',
             '/endpoint',
             ['SOAPAction' => 'myaction'],
-            $soapRequest)
+            $soapRequest
+        )
         );
 
         $soapBody = (string)$this->mockClient->getRequests()[0]->getBody();
         $xpath = $this->fetchEnvelopeXpath($soapBody);
 
         // Make sure the response is available:
-        $this->assertEquals($response, $result);
+        static::assertEquals($response, $result);
 
         // Check structure
-        $this->assertEquals(1, $xpath->query('//soap:Header/wsa:Action')->count(), 'No WSA Action tag');
-        $this->assertEquals(1, $xpath->query('//soap:Header/wsa:To')->count(), 'No WSA To tag');
-        $this->assertEquals(1, $xpath->query('//soap:Header/wsa:MessageID')->count(), 'No WSA MessageID tag');
-        $this->assertEquals(1, $xpath->query('//soap:Header/wsa:ReplyTo')->count(), 'No WSA ReplyTo tag');
-        $this->assertEquals(1, $xpath->query('//soap:Header/wsa:ReplyTo/wsa:Address')->count(), 'No WSA ReplyTo Address tag');
+        static::assertEquals(1, $xpath->query('//soap:Header/wsa:Action')->count(), 'No WSA Action tag');
+        static::assertEquals(1, $xpath->query('//soap:Header/wsa:To')->count(), 'No WSA To tag');
+        static::assertEquals(1, $xpath->query('//soap:Header/wsa:MessageID')->count(), 'No WSA MessageID tag');
+        static::assertEquals(1, $xpath->query('//soap:Header/wsa:ReplyTo')->count(), 'No WSA ReplyTo tag');
+        static::assertEquals(1, $xpath->query('//soap:Header/wsa:ReplyTo/wsa:Address')->count(), 'No WSA ReplyTo Address tag');
 
         // Check defaults:
-        $this->assertEquals('myaction', $xpath->query('//soap:Header/wsa:Action')->item(0)->nodeValue);
-        $this->assertEquals('/endpoint', $xpath->query('//soap:Header/wsa:To')->item(0)->nodeValue);
-        $this->assertMatchesRegularExpression(
+        static::assertEquals('myaction', $xpath->query('//soap:Header/wsa:Action')->item(0)->nodeValue);
+        static::assertEquals('/endpoint', $xpath->query('//soap:Header/wsa:To')->item(0)->nodeValue);
+        static::assertMatchesRegularExpression(
             '/^uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i',
             $xpath->query('//soap:Header/wsa:MessageID')->item(0)->nodeValue
         );
-        $this->assertEquals(
+        static::assertEquals(
             WsaMiddleware2005::WSA_ADDRESS2005_ANONYMOUS,
             $xpath->query('//soap:Header/wsa:ReplyTo/wsa:Address')->item(0)->nodeValue
         );

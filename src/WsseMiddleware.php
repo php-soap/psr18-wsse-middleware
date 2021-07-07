@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware;
 
@@ -11,7 +11,7 @@ use RobRichards\XMLSecLibs\XMLSecurityKey;
 use Soap\Psr18Transport\Xml\XmlMessageManipulator;
 use VeeWee\Xml\Dom\Document;
 
-class WsseMiddleware implements Plugin
+final class WsseMiddleware implements Plugin
 {
     private string $privateKeyFile;
     private string $publicKeyFile;
@@ -56,7 +56,7 @@ class WsseMiddleware implements Plugin
         return $new;
     }
 
-    public function withUserToken(string $username, string $password = '', $digest = false): self
+    public function withUserToken(string $username, string $password = '', bool $digest = false): self
     {
         $new = clone $this;
         $new->hasUserToken = true;
@@ -87,7 +87,7 @@ class WsseMiddleware implements Plugin
     public function handleRequest(RequestInterface $request, callable $next, callable $first): Promise
     {
         return $this->beforeRequest($next, $request)->then(
-            fn(ResponseInterface $response): ResponseInterface => $this->afterResponse($response)
+            fn (ResponseInterface $response): ResponseInterface => $this->afterResponse($response)
         );
     }
 

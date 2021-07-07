@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware;
 
@@ -10,7 +10,7 @@ use Soap\Psr18Transport\HttpBinding\SoapActionDetector;
 use Soap\Psr18Transport\Xml\XmlMessageManipulator;
 use VeeWee\Xml\Dom\Document;
 
-class WsaMiddleware2005 implements Plugin
+final class WsaMiddleware2005 implements Plugin
 {
     const WSA_ADDRESS2005_ANONYMOUS = 'http://www.w3.org/2005/08/addressing/anonymous';
 
