@@ -230,7 +230,7 @@ final class WsseMiddlewareTest extends TestCase
         $response = $this->client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
 
         $encryptedXPath = $this->fetchEnvelopeXpath((string)$this->mockClient->getRequests()[0]->getBody());
-        $decryptedXPath = $this->fetchEnvelopeXpath($response->getBody());
+        $decryptedXPath = $this->fetchEnvelopeXpath((string)$response->getBody());
 
         // Check Request headers:
         static::assertEquals($encryptedXPath->query('//soap:Header/wsse:Security/xenc:EncryptedKey')->count(), 1, 'No EncryptedKey tag');
