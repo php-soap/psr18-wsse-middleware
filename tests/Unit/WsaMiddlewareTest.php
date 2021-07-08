@@ -41,11 +41,11 @@ final class WsaMiddlewareTest extends TestCase
         $this->mockClient->addResponse($response = new Response(200));
         $result = $this->client->sendRequest(
             $request = new Request(
-            'POST',
-            '/endpoint',
-            ['SOAPAction' => 'myaction'],
-            $soapRequest
-        )
+                'POST',
+                '/endpoint',
+                ['SOAPAction' => 'myaction'],
+                $soapRequest
+            )
         );
 
         $soapBody = (string)$this->mockClient->getRequests()[0]->getBody();
