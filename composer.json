@@ -20,9 +20,9 @@
     ],
     "require": {
         "php": "^8.0",
-        "php-soap/psr18-transport": "dev-main",
-        "php-soap/engine": "dev-main",
-        "php-soap/xml": "dev-main",
+        "php-soap/psr18-transport": "^0.1.0",
+        "php-soap/engine": "^0.1.0",
+        "php-soap/xml": "^0.1.0",
         "php-http/client-common": "^2.3",
         "robrichards/wse-php": "^2.0",
         "veewee/xml": "^0.6.1"
