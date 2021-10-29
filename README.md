@@ -5,7 +5,7 @@ This package provides the tools you need in order to add WSSE and WSA security t
 ## Installation
 
 ```shell
-composer install php-soap/psr18-wsse-middleware
+composer require php-soap/psr18-wsse-middleware
 ```
 
 This package includes the [php-soap/psr18-transport](https://github.com/php-soap/psr18-transport/) package and is meant to be used together with it.
