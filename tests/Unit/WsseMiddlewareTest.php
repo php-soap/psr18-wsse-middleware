@@ -10,6 +10,13 @@ use Nyholm\Psr7\Request;
 use Nyholm\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
+use Soap\Psr18WsseMiddleware\WSSecurity\DigestMethod;
+use Soap\Psr18WsseMiddleware\WSSecurity\Entry;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier\BinarySecurityTokenIdentifier;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier\X509SubjectKeyIdentifier;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Certificate;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Key;
+use Soap\Psr18WsseMiddleware\WSSecurity\SignatureMethod;
 use Soap\Psr18WsseMiddleware\WsseMiddleware;
 use Soap\Xml\Xpath\EnvelopePreset;
 use VeeWee\Xml\Dom\Document;
@@ -17,44 +24,38 @@ use VeeWee\Xml\Dom\Xpath;
 
 final class WsseMiddlewareTest extends TestCase
 {
-    private PluginClient $client;
+    private Certificate $publicKey;
+    private Key $privateKey;
     private Client $mockClient;
-    private WsseMiddleware $middleware;
 
-    /*
-     * Initialize all basic objects
-     */
     protected function setUp(): void
     {
-        $this->middleware = new WsseMiddleware(
-            FIXTURE_DIR . '/certificates/wsse-client-private-key.pem',
-            FIXTURE_DIR . '/certificates/wsse-client-public-key.pub'
-        );
+        $this->publicKey = Certificate::fromFile(FIXTURE_DIR . '/certificates/wsse-client-public-key.pub');
+        $this->privateKey = Key::fromFile(FIXTURE_DIR . '/certificates/wsse-client-private-key.pem');
         $this->mockClient = new Client(Psr17FactoryDiscovery::findResponseFactory());
-        $this->client = new PluginClient($this->mockClient, [$this->middleware]);
     }
 
-    /**
-     * @param callable(WsseMiddleware): WsseMiddleware $configurator
-     */
-    protected function configureMiddleware(callable $configurator)
+    private function configureMiddleware(array $incoming, array $outgoing = []): PluginClient
     {
-        $this->middleware = $configurator($this->middleware);
-        $this->client = new PluginClient($this->mockClient, [$this->middleware]);
+        return new PluginClient($this->mockClient, [new WsseMiddleware($incoming, $outgoing)]);
     }
 
-    
     public function test_it_is_a_middleware()
     {
-        static::assertInstanceOf(Plugin::class, $this->middleware);
+        static::assertInstanceOf(Plugin::class, new WsseMiddleware([]));
     }
 
-    
-    public function test_it_adds__wsse_to_the_request_xml()
+    public function test_it_adds_wsse_to_the_request_xml()
     {
+        $client = $this->configureMiddleware([
+            new Entry\Timestamp(),
+            new Entry\BinarySecurityToken($this->publicKey),
+            new Entry\Signature($this->privateKey, new BinarySecurityTokenIdentifier()),
+        ]);
+
         $soapRequest = file_get_contents(FIXTURE_DIR . '/soap/empty-request.xml');
         $this->mockClient->addResponse($response = new Response(200));
-        $result = $this->client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
+        $result = $client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
 
         $soapBody = (string)$this->mockClient->getRequests()[0]->getBody();
         $xpath = $this->fetchEnvelopeXpath($soapBody);
@@ -91,16 +92,16 @@ final class WsseMiddlewareTest extends TestCase
         );
     }
 
-    
+
     public function test_it_is_possible_to_configure_expiry_ttl()
     {
-        $this->configureMiddleware(
-            static fn (WsseMiddleware $middleware) => $middleware->withTimestamp(100)
-        );
+        $client = $this->configureMiddleware([
+            new Entry\Timestamp(100),
+        ]);
 
         $soapRequest = file_get_contents(FIXTURE_DIR . '/soap/empty-request.xml');
         $this->mockClient->addResponse($response = new Response(200));
-        $this->client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
+        $client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
 
         $soapBody = (string)$this->mockClient->getRequests()[0]->getBody();
         $xpath = $this->fetchEnvelopeXpath($soapBody);
@@ -111,16 +112,19 @@ final class WsseMiddlewareTest extends TestCase
         );
     }
 
-    
+
     public function test_it_is_possible_to_sign_all_headers()
     {
-        $this->configureMiddleware(
-            static fn (WsseMiddleware $middleware) => $middleware->withAllHeadersSigned()
-        );
+        $client = $this->configureMiddleware([
+            new Entry\Timestamp(),
+            new Entry\BinarySecurityToken($this->publicKey),
+            (new Entry\Signature($this->privateKey, new BinarySecurityTokenIdentifier()))
+                ->withSignAllHeaders(true),
+        ]);
 
         $soapRequest = file_get_contents(FIXTURE_DIR . '/soap/wsa.xml');
         $this->mockClient->addResponse($response = new Response(200));
-        $this->client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
+        $client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
 
         $soapBody = (string)$this->mockClient->getRequests()[0]->getBody();
         $xpath = $this->fetchEnvelopeXpath($soapBody);
@@ -132,37 +136,48 @@ final class WsseMiddlewareTest extends TestCase
         static::assertEquals(1, $xpath->query('//wsa:ReplyTo[@wsu:Id]')->count(), 'No signed WSA:ReplyTo.');
     }
 
-    
-    public function test_it_is_possible_to_specify_another_digital_signature_method()
+
+    public function test_it_is_possible_to_specify_another_digital_signature_and_digest_method()
     {
-        $this->configureMiddleware(
-            static fn (WsseMiddleware $middleware) => $middleware->withDigitalSignMethod(XMLSecurityKey::RSA_SHA256)
-        );
+        $client = $this->configureMiddleware([
+            new Entry\BinarySecurityToken($this->publicKey),
+            (new Entry\Signature($this->privateKey, new BinarySecurityTokenIdentifier()))
+                ->withSignatureMethod(SignatureMethod::RSA_SHA256)
+                ->withDigestMethod(DigestMethod::SHA256),
+        ]);
 
         $soapRequest = file_get_contents(FIXTURE_DIR . '/soap/empty-request.xml');
         $this->mockClient->addResponse($response = new Response(200));
-        $this->client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
+        $client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
 
         $soapBody = (string)$this->mockClient->getRequests()[0]->getBody();
         $xpath = $this->fetchEnvelopeXpath($soapBody);
 
         // Check defaults:
         static::assertEquals(
-            XMLSecurityKey::RSA_SHA256,
+            SignatureMethod::RSA_SHA256->value,
             (string) $xpath->query('//ds:SignatureMethod')->item(0)->getAttribute('Algorithm')
+        );
+        static::assertEquals(
+            DigestMethod::SHA256->value,
+            (string) $xpath->query('//ds:DigestMethod')->item(0)->getAttribute('Algorithm')
         );
     }
 
-    
     public function test_it_is_possible_to_specify_a_user_token()
     {
-        $this->configureMiddleware(
-            static fn (WsseMiddleware $middleware) => $middleware->withUserToken('username', 'password', false)
-        );
+        $client = $this->configureMiddleware([
+            new Entry\Timestamp(),
+            new Entry\BinarySecurityToken($this->publicKey),
+            (new Entry\Username('username'))
+                ->withPassword('password')
+                ->withDigest(false),
+            (new Entry\Signature($this->privateKey, new BinarySecurityTokenIdentifier())),
+        ]);
 
         $soapRequest = file_get_contents(FIXTURE_DIR . '/soap/empty-request.xml');
         $this->mockClient->addResponse($response = new Response(200));
-        $this->client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
+        $client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
 
         $soapBody = (string)$this->mockClient->getRequests()[0]->getBody();
         $xpath = $this->fetchEnvelopeXpath($soapBody);
@@ -185,16 +200,17 @@ final class WsseMiddlewareTest extends TestCase
         );
     }
 
-    
     public function test_it_is_possible_to_specify_a_user_token_with_digest()
     {
-        $this->configureMiddleware(
-            static fn (WsseMiddleware $middleware) => $middleware->withUserToken('username', 'password', true)
-        );
+        $client = $this->configureMiddleware([
+            (new Entry\Username('username'))
+                ->withPassword('password')
+                ->withDigest(true)
+        ]);
 
         $soapRequest = file_get_contents(FIXTURE_DIR . '/soap/empty-request.xml');
         $this->mockClient->addResponse($response = new Response(200));
-        $this->client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
+        $client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
 
         $soapBody = (string)$this->mockClient->getRequests()[0]->getBody();
         $xpath = $this->fetchEnvelopeXpath($soapBody);
@@ -215,19 +231,26 @@ final class WsseMiddlewareTest extends TestCase
         );
     }
 
-    
+
     public function test_it_is_possible_to_encrypt_a_request()
     {
-        $this->configureMiddleware(
-            static fn (WsseMiddleware $middleware) => $middleware
-                ->withEncryption(FIXTURE_DIR . '/certificates/wsse-client-x509.pem')
-                ->withServerCertificateHasSubjectKeyIdentifier(true)
+        $signCert = Certificate::fromFile(FIXTURE_DIR . '/certificates/wsse-client-x509.pem');
+        $client = $this->configureMiddleware(
+            [
+                new Entry\Timestamp(),
+                new Entry\BinarySecurityToken($this->publicKey),
+                (new Entry\Signature($this->privateKey, new BinarySecurityTokenIdentifier())),
+                (new Entry\Encryption($signCert, new X509SubjectKeyIdentifier($signCert)))
+            ],
+            [
+                (new Entry\Decryption($this->privateKey))
+            ]
         );
 
         $soapRequest = file_get_contents(FIXTURE_DIR . '/soap/empty-request-with-head-and-body.xml');
         $soapResponse = file_get_contents(FIXTURE_DIR . '/soap/wsse-decrypt-response.xml');
         $this->mockClient->addResponse($response = new Response(200, [], $soapResponse));
-        $response = $this->client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
+        $response = $client->sendRequest($request = new Request('POST', '/', ['SOAPAction' => 'myaction'], $soapRequest));
 
         $encryptedXPath = $this->fetchEnvelopeXpath((string)$this->mockClient->getRequests()[0]->getBody());
         $decryptedXPath = $this->fetchEnvelopeXpath((string)$response->getBody());
