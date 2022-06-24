@@ -38,43 +38,209 @@ $transport = Psr18Transport::createForClient(
 
 ### WsseMiddleware
 
-If you ever had to implement Web Service Security (WSS / WSSE) manually, you know that it is a lot of work to get this one working.
-Luckily for you we created an opinionated WSSE middleware that can be used to sign your SOAP requests.
+Oh boy ... WS-Security ... can be a real pain !
+This package aims for being as flexible as possible and provides you the tools you need to correctly configure Web Service Security.
+The components are shaped based on the [WS-Security UI inside SoapUI](https://www.soapui.org/docs/soapui-projects/ws-security/).
+This enables you to configure everything the way your SOAP server wants you to!
+If you have a working config on SoapUI, you can transform it to PHP code by following the entries and their configurations. 
 
-**Usage**
+*Usage:*
+
 ```php
 use Http\Client\Common\PluginClient;
 use Soap\Psr18Transport\Psr18Transport;
 use Soap\Psr18WsseMiddleware\WsseMiddleware;
 
-// Simple:
-$wsse = new WsseMiddleware('privatekey.pem', 'publickey.pyb');
-
-// With signed headers. E.g: in combination with WSA:
-$wsse = (new WsseMiddleware('privatekey.pem', 'publickey.pyb'))
-    ->withAllHeadersSigned();
-
-// With configurable timestamp expiration:
-$wsse = (new WsseMiddleware('privatekey.pem', 'publickey.pyb'))
-    ->withTimestamp(3600);
-
-// With plain user token:
-$wsse = (new WsseMiddleware('privatekey.pem', 'publickey.pyb'))
-    ->withUserToken('username', 'password', false);
-
-// With digest user token:
-$wsse = (new WsseMiddleware('privatekey.pem', 'publickey.pyb'))
-    ->withUserToken('username', 'password', true);
-
-// With end-to-end encryption enabled:
-$wsse = (new WsseMiddleware('privatekey.pem', 'publickey.pyb'))
-    ->withEncryption('client-x509.pem')
-    ->withServerCertificateHasSubjectKeyIdentifier(true);
-
-// Configure your PSR18 client:
 $transport = Psr18Transport::createForClient(
     new PluginClient($yourPsr18Client, [
-        $wsse
+        new WsseMiddleware([$entries])
     ])
 );
 ```
+
+The WSSE middleware can be built out of multiple configurable entries:
+
+* BinarySecurityToken
+* Decryption
+* Encryption
+* SamlAssertion
+* Signature
+* Timestamp
+* Username
+
+Underneath, there are some common examples on how to configure the `$wsseMiddleware`.
+
+#### Adding a username and password
+
+Some services require you to add a username and optionally a password.
+This can be done with following middleware.
+
+```php
+use Soap\Psr18WsseMiddleware\WsseMiddleware;
+use Soap\Psr18WsseMiddleware\WSSecurity\Entry;
+
+$wsseMiddleware = new WsseMiddleware(
+    outgoing: [
+        (new Entry\Username($user))
+            ->withPassword('xxx')
+            ->withDigest(false),
+    ]
+);
+```
+
+#### Signing a SOAP request with PKCS12 or X509 certificate.
+
+This is one of the most common implementation of WSS out there.
+You are granted a certificate by the soap service with which you need to fetch data.
+
+In case of a p12 certificate: convert it to a private key and public X509 certificate first:
+
+```bash
+openssl pkcs12 -in your.p12 -out security_token.pub -clcerts -nokeys
+openssl pkcs12 -in your.p12 -out security_token.priv -nocerts -nodes
+```
+
+Next, you can configure the middleware like this:
+
+```php
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Certificate;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Key;
+use Soap\Psr18WsseMiddleware\WSSecurity\SignatureMethod;
+use Soap\Psr18WsseMiddleware\WSSecurity\DigestMethod;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
+use Soap\Psr18WsseMiddleware\WsseMiddleware;
+use Soap\Psr18WsseMiddleware\WSSecurity\Entry;
+
+$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx'); // Regular private key (not wrapped in X509)
+$pubKey = Certificate::fromFile('security_token.pub'); // Public X509 cert
+
+$wsseMiddleware = new WsseMiddleware(
+    outgoing: [
+        new Entry\Timestamp(60),
+        new Entry\BinarySecurityToken($pubKey),
+        (new Entry\Signature(
+            $privKey,
+            new KeyIdentifier\BinarySecurityTokenIdentifier()
+        ))
+            ->withSignatureMethod(SignatureMethod::RSA_SHA256)
+            ->withDigestMethod(DigestMethod::SHA256)
+            ->withSignAllHeaders(true)
+            ->withSignBody(true)
+    ]
+);
+```
+
+This example can also be used in combination with signing and username authentication.
+
+#### Authorize a SOAP request with a SAML assertion
+
+Another common implementation is authentication through a WS-Trust compliant STS instance.
+In this case, you first have to fetch a SAML assertion from the STS service.
+Most of them require you to sign the request with a X509 certificate.
+This can be done with the middleware above.
+
+Once you received back your SAML assertion, you have to pass it to the webservice you want to contact.
+A common configuration for passing the SAML assertion might look like this:
+
+```php
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Certificate;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Key;
+use Soap\Psr18WsseMiddleware\WSSecurity\SignatureMethod;
+use Soap\Psr18WsseMiddleware\WSSecurity\DigestMethod;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
+use Soap\Psr18WsseMiddleware\WsseMiddleware;
+use Soap\Psr18WsseMiddleware\WSSecurity\Entry;
+use VeeWee\Xml\Dom\Document;
+use function VeeWee\Xml\Dom\Locator\document_element;
+
+$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx'); // Regular private key (not wrapped in X509)
+
+// These are provided through the STS service.
+$samlAssertion = Document::fromXmlString(<<<EOXML
+<saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:1.0:assertion" AssertionID="xxxx" />
+EOXML
+);
+$samlAssertionId = $samlAssertion->locate(document_element())->getAttribute('AssertionID');
+
+$wsseMiddleware = new WsseMiddleware(
+    outgoing: [
+        new Entry\Timestamp(60),
+        (new Entry\Signature(
+            $privKey,
+            new KeyIdentifier\SamlKeyIdentifier($samlAssertionId)
+        ))
+            ->withSignatureMethod(SignatureMethod::RSA_SHA256)
+            ->withDigestMethod(DigestMethod::SHA256)
+            ->withSignAllHeaders(true)
+            ->withSignBody(true)
+            ->withInsertBefore(false),
+        new Entry\SamlAssertion($samlAssertion),
+    ]
+);
+```
+
+#### Encrypt sensitive data
+
+Some services require you to encrypt sensitive parts of the request and decrypt sensitive parts of the response.
+In this case, you can add your public key to the request, encrypt the payload and send it over the wire.
+Incoming responses will be encrypted with your public key and kan be decrypted by using your private key.
+
+
+Encryption contains a [known bug](https://github.com/robrichards/wse-php/pull/67) in the underlying [robrichards/wse-php](https://github.com/robrichards/wse-php) library.
+Since a fix has not been merged yet, you can apply a patch like this:
+
+```bash
+composer require --dev cweagans/composer-patches
+```
+
+```json
+{
+  "extra": {
+    "patches": {
+      "robrichards/wse-php": {
+        "Fix encryption bug": "https://patch-diff.githubusercontent.com/raw/robrichards/wse-php/pull/67.diff"
+      }
+    }
+  }
+}
+```
+
+The configuration for encryption looks like this:
+
+```php
+use Soap\Psr18WsseMiddleware\WSSecurity\DataEncryptionMethod;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyEncryptionMethod;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Certificate;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Key;
+use Soap\Psr18WsseMiddleware\WSSecurity\SignatureMethod;
+use Soap\Psr18WsseMiddleware\WSSecurity\DigestMethod;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
+use Soap\Psr18WsseMiddleware\WsseMiddleware;
+use Soap\Psr18WsseMiddleware\WSSecurity\Entry;
+
+$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx'); // Regular private key (not wrapped in X509)
+$pubKey = Certificate::fromFile('security_token.pub'); // Public X509 cert
+$signKey = Certificate::fromFile('sign-key.pem'); // X509 cert for signing. Could be the same as $pubKey.
+
+$wsseMiddleware = new WsseMiddleware(
+    outgoing: [
+        new Entry\Timestamp(60),
+        new Entry\BinarySecurityToken($pubKey),
+        (new Entry\Signature(
+            $privKey,
+            new KeyIdentifier\BinarySecurityTokenIdentifier()
+        ))
+        (new Entry\Encryption(
+            $signKey,
+            new KeyIdentifier\X509SubjectKeyIdentifier($signKey)
+        ))
+            ->withKeyEncryptionMethod(KeyEncryptionMethod::RSA_OAEP_MGF1P)
+            ->withDataEncryptionMethod(DataEncryptionMethod::AES256_CBC)
+    ],
+    incoming: [
+        new Entry\Decryption($privKey)
+    ]
+);
+```
+
+Note: Encryption only can also be done without adding a signature.
