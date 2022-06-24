@@ -185,6 +185,28 @@ Some services require you to encrypt sensitive parts of the request and decrypt 
 In this case, you can add your public key to the request, encrypt the payload and send it over the wire.
 Incoming responses will be encrypted with your public key and kan be decrypted by using your private key.
 
+
+Encryption contains a [known bug](https://github.com/robrichards/wse-php/pull/67) in the underlying [robrichards/wse-php](https://github.com/robrichards/wse-php) library.
+Since a fix has not been merged yet, you can apply a patch like this:
+
+```bash
+composer require --dev cweagans/composer-patches
+```
+
+```json
+{
+  "extra": {
+    "patches": {
+      "robrichards/wse-php": {
+        "Fix encryption bug": "https://patch-diff.githubusercontent.com/raw/robrichards/wse-php/pull/67.diff"
+      }
+    }
+  }
+}
+```
+
+The configuration for encryption looks like this:
+
 ```php
 use Soap\Psr18WsseMiddleware\WSSecurity\DataEncryptionMethod;
 use Soap\Psr18WsseMiddleware\WSSecurity\KeyEncryptionMethod;
