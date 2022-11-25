@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Soap\Psr18WsseMiddleware\WSSecurity\KeyStore;
 
 use ParagonIE\HiddenString\HiddenString;
-use function Psl\Filesystem\read_file;
+use function Psl\File\read;
 
 final class Key implements KeyInterface
 {
@@ -17,9 +17,12 @@ final class Key implements KeyInterface
         $this->passphrase = new HiddenString('');
     }
 
+    /**
+     * @param non-empty-string $file
+     */
     public static function fromFile(string $file): self
     {
-        return new self(read_file($file));
+        return new self(read($file));
     }
 
     public function withPassphrase(string $passphrase): self
