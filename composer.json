@@ -35,7 +35,7 @@
         "nyholm/psr7": "^1.5",
         "php-http/mock-client": "^1.5",
         "symfony/http-client": "^6.1",
-        "phpunit/phpunit": "^9.5",
+        "phpunit/phpunit": "^10.0",
         "cweagans/composer-patches": "^1.7"
     },
     "extra": {
