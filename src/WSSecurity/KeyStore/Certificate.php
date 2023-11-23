@@ -6,6 +6,9 @@ namespace Soap\Psr18WsseMiddleware\WSSecurity\KeyStore;
 use ParagonIE\HiddenString\HiddenString;
 use function Psl\File\read;
 
+/**
+ * Contains a PEM representation of a public X.509 Certificate.
+ */
 final class Certificate implements KeyInterface
 {
     private HiddenString $key;

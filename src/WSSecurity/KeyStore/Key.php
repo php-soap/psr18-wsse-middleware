@@ -6,6 +6,9 @@ namespace Soap\Psr18WsseMiddleware\WSSecurity\KeyStore;
 use ParagonIE\HiddenString\HiddenString;
 use function Psl\File\read;
 
+/**
+ * Contains a PEM representation of an (un)encrypted private key (PKCS_8).
+ */
 final class Key implements KeyInterface
 {
     private HiddenString $key;

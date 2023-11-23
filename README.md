@@ -97,10 +97,30 @@ $wsseMiddleware = new WsseMiddleware(
 );
 ```
 
-#### Signing a SOAP request with PKCS12 or X509 certificate.
+### Key stores
 
-This is one of the most common implementation of WSS out there.
-You are granted a certificate by the soap service with which you need to fetch data.
+This package provides a couple of `Key` wrappers that can be used to pass private / public keys:
+
+* `KeyStore\Certificate`: Contains a public X.509 certificate in PEM format.
+* `KeyStore\Key`: Contains a PKCS_8 private key in PEM format.
+* `KeyStore\ClientCertificate`: Contains both a public X.509 certificate and PKCS_8 private key in PEM format.
+
+Example:
+
+```php
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Certificate;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\ClientCertificate;
+use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Key;
+
+$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx'); // Regular private key (not wrapped in X509)
+$pubKey = Certificate::fromFile('security_token.pub'); // Public X509 cert
+
+// or:
+
+$bundle = ClientCertificate::fromFile('client-certificate.pem')->withPassphrase('xxx');
+$privKey = $bunlde->privateKey();
+$pubKey = $bunlde->publicCertificate();
+```
 
 In case of a p12 certificate: convert it to a private key and public X509 certificate first:
 
@@ -108,6 +128,11 @@ In case of a p12 certificate: convert it to a private key and public X509 certif
 openssl pkcs12 -in your.p12 -out security_token.pub -clcerts -nokeys
 openssl pkcs12 -in your.p12 -out security_token.priv -nocerts -nodes
 ```
+
+#### Signing a SOAP request with PKCS12 or X509 certificate.
+
+This is one of the most common implementation of WSS out there.
+You are granted a certificate by the soap service with which you need to fetch data.
 
 Next, you can configure the middleware like this:
 
@@ -120,8 +145,8 @@ use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
 use Soap\Psr18WsseMiddleware\WsseMiddleware;
 use Soap\Psr18WsseMiddleware\WSSecurity\Entry;
 
-$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx'); // Regular private key (not wrapped in X509)
-$pubKey = Certificate::fromFile('security_token.pub'); // Public X509 cert
+$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx');
+$pubKey = Certificate::fromFile('security_token.pub');
 
 $wsseMiddleware = new WsseMiddleware(
     outgoing: [
@@ -162,7 +187,7 @@ use Soap\Psr18WsseMiddleware\WSSecurity\Entry;
 use VeeWee\Xml\Dom\Document;
 use function VeeWee\Xml\Dom\Locator\document_element;
 
-$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx'); // Regular private key (not wrapped in X509)
+$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx');
 
 // These are provided through the STS service.
 $samlAssertion = Document::fromXmlString(<<<EOXML
@@ -227,7 +252,7 @@ use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
 use Soap\Psr18WsseMiddleware\WsseMiddleware;
 use Soap\Psr18WsseMiddleware\WSSecurity\Entry;
 
-$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx'); // Regular private key (not wrapped in X509)
+$privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx'); // Private key
 $pubKey = Certificate::fromFile('security_token.pub'); // Public X509 cert
 $signKey = Certificate::fromFile('sign-key.pem'); // X509 cert for signing. Could be the same as $pubKey.
 
