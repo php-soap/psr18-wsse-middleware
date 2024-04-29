@@ -29,7 +29,7 @@
         "php-soap/xml": "^1.4",
         "php-http/client-common": "^2.3",
         "robrichards/wse-php": "^2.0",
-        "veewee/xml": "^2.2"
+        "veewee/xml": "^2.2||^3.0"
     },
     "require-dev": {
         "nyholm/psr7": "^1.5",
