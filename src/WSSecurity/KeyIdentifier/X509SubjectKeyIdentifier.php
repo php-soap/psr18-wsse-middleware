@@ -21,7 +21,7 @@ final class X509SubjectKeyIdentifier implements KeyIdentifier
     public function __invoke(Document $envelope, WSSESoap $wsse, DOMElement $parent): void
     {
         $x509 = openssl_x509_parse($this->certificate->contents());
-        if (!$x509) {
+        if ($x509 === false) {
             return;
         }
 
