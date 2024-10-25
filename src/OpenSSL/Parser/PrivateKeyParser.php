@@ -9,6 +9,9 @@ use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Key;
 
 final class PrivateKeyParser
 {
+    /**
+     * @psalm-suppress RiskyTruthyFalsyComparison
+     */
     public function __invoke(HiddenString $privateKey, ?HiddenString $password = null): Key
     {
         $parsed = '';
