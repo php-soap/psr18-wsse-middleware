@@ -34,7 +34,7 @@
     "require-dev": {
         "nyholm/psr7": "^1.5",
         "php-http/mock-client": "^1.5",
-        "symfony/http-client": "^6.1",
+        "symfony/http-client": "^7.1",
         "phpunit/phpunit": "^11.4",
         "cweagans/composer-patches": "^1.7"
     },
