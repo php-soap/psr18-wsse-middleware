@@ -19,6 +19,8 @@ final class Encryption implements WsseEntry
 
     private DataEncryptionMethod $dataEncryptionMethod = DataEncryptionMethod::AES256_CBC;
     private KeyEncryptionMethod $keyEncryptionMethod = KeyEncryptionMethod::RSA_OAEP_MGF1P;
+    
+    private bool $encryptSignature = true;
 
     public function __construct(KeyInterface $key, KeyIdentifier $keyIdentifier)
     {
@@ -42,6 +44,14 @@ final class Encryption implements WsseEntry
         return $new;
     }
 
+    public function withEncryptSignature(bool $encryptSignature): self
+    {
+        $new = clone $this;
+        $new->encryptSignature = $encryptSignature;
+
+        return $new;
+    }
+
     public function __invoke(Document $envelope, WSSESoap $wsse): void
     {
         $dataEncryptionKey = new XMLSecurityKey($this->dataEncryptionMethod->value);
@@ -51,7 +61,7 @@ final class Encryption implements WsseEntry
         $encryptionKey->passphrase = $this->key->passphrase();
         $encryptionKey->loadKey($this->key->contents(), false, $this->key->isCertificate());
 
-        $wsse->encryptSoapDoc($encryptionKey, $dataEncryptionKey);
+        $wsse->encryptSoapDoc($encryptionKey, $dataEncryptionKey,encryptSignature:$this->encryptSignature);
 
         $encryptedKey = (new EncryptedKeyLocator())($envelope);
         ($this->keyIdentifier)($envelope, $wsse, $encryptedKey);
