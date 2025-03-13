@@ -270,6 +270,9 @@ $wsseMiddleware = new WsseMiddleware(
         ))
             ->withKeyEncryptionMethod(KeyEncryptionMethod::RSA_OAEP_MGF1P)
             ->withDataEncryptionMethod(DataEncryptionMethod::AES256_CBC)
+            
+            //Per Default the Signature gets Encrypted too. To Disable Encryption of the Signature you can add the following. 
+            ->withEncryptSignature(false)
     ],
     incoming: [
         new Entry\Decryption($privKey)
