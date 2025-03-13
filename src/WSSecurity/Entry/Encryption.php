@@ -61,7 +61,7 @@ final class Encryption implements WsseEntry
         $encryptionKey->passphrase = $this->key->passphrase();
         $encryptionKey->loadKey($this->key->contents(), false, $this->key->isCertificate());
 
-        $wsse->encryptSoapDoc($encryptionKey, $dataEncryptionKey,encryptSignature:$this->encryptSignature);
+        $wsse->encryptSoapDoc($encryptionKey, $dataEncryptionKey, encryptSignature:$this->encryptSignature);
 
         $encryptedKey = (new EncryptedKeyLocator())($envelope);
         ($this->keyIdentifier)($envelope, $wsse, $encryptedKey);
