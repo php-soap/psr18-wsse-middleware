@@ -2,9 +2,9 @@
 
 namespace Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
 
+use DOMDocument;
 use DOMElement;
 use RobRichards\WsePhp\WSSESoap;
-use VeeWee\Xml\Dom\Document;
 
 /**
  * @link https://www.ibm.com/docs/en/was/8.5.5?topic=services-key-information
@@ -15,5 +15,5 @@ interface KeyIdentifier
     /**
      * The parent can either be the ds:Signature or xenc:EncryptedKey element/
      */
-    public function __invoke(Document $envelope, WSSESoap $wsse, DOMElement $parent): void;
+    public function __invoke(DOMDocument $envelope, WSSESoap $wsse, DOMElement $parent): void;
 }

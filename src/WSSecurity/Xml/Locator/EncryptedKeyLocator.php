@@ -3,22 +3,23 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\WSSecurity\Xml\Locator;
 
+use DOMDocument;
 use DOMElement;
-use Psl\Type\Exception\AssertException;
+use DOMNode;
+use DOMNodeList;
 use Soap\Psr18WsseMiddleware\WSSecurity\Xml\Xpath\WssePreset;
-use VeeWee\Xml\Dom\Document;
-use function VeeWee\Xml\Dom\Assert\assert_element;
+use function Psl\Type\instance_of;
 
 final class EncryptedKeyLocator
 {
-    /**
-     * @throws AssertException
-     */
-    public function __invoke(Document $document): DOMElement
+    public function __invoke(DOMDocument $document): DOMElement
     {
-        return assert_element(
-            $document->xpath(new WssePreset($document))
-                ->querySingle('/wssoap:Envelope/wssoap:Header/wswsse:Security/xenc:EncryptedKey')
+        $xpath = WssePreset::xpath($document);
+        /** @var DOMNodeList<DOMNode>|false $result */
+        $result = $xpath->query('/wssoap:Envelope/wssoap:Header/wswsse:Security/xenc:EncryptedKey');
+
+        return instance_of(DOMElement::class)->assert(
+            $result !== false ? $result->item(0) : null
         );
     }
 }

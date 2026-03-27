@@ -3,15 +3,10 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
 
+use DOMDocument;
 use DOMElement;
 use RobRichards\WsePhp\WSSESoap;
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
-use VeeWee\Xml\Dom\Document;
-use function VeeWee\Xml\Dom\Builder\attribute;
-use function VeeWee\Xml\Dom\Builder\attributes;
-use function VeeWee\Xml\Dom\Builder\children;
-use function VeeWee\Xml\Dom\Builder\namespaced_element;
-use function VeeWee\Xml\Dom\Builder\value;
 
 final class CustomKeyIdentifier implements KeyIdentifier
 {
@@ -39,33 +34,18 @@ final class CustomKeyIdentifier implements KeyIdentifier
         return $new;
     }
 
-    /**
-     * @psalm-suppress ArgumentTypeCoercion - psalm is not able to determine DOMNode - DOMElement confusion for now.
-     */
-    public function __invoke(Document $envelope, WSSESoap $wsse, DOMElement $parent): void
+    public function __invoke(DOMDocument $envelope, WSSESoap $wsse, DOMElement $parent): void
     {
-        $keyInfo = $envelope->build(
-            namespaced_element(
-                XMLSecurityDSig::XMLDSIGNS,
-                'ds:KeyInfo',
-                children(
-                    namespaced_element(
-                        WSSESoap::WSSENS,
-                        WSSESoap::WSSEPFX . ':SecurityTokenReference',
-                        children(
-                            namespaced_element(
-                                WSSESoap::WSSENS,
-                                WSSESoap::WSSEPFX . ':KeyIdentifier',
-                                attribute('ValueType', $this->valueType),
-                                attributes($this->attributes),
-                                value($this->identifier)
-                            )
-                        )
-                    )
-                )
-            )
-        );
-
-        $parent->append(...$keyInfo);
+        $keyInfo = $envelope->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
+        $securityTokenRef = $envelope->createElementNS(WSSESoap::WSSENS, WSSESoap::WSSEPFX . ':SecurityTokenReference');
+        $keyIdentifier = $envelope->createElementNS(WSSESoap::WSSENS, WSSESoap::WSSEPFX . ':KeyIdentifier');
+        $keyIdentifier->setAttribute('ValueType', $this->valueType);
+        foreach ($this->attributes as $name => $val) {
+            $keyIdentifier->setAttribute($name, $val);
+        }
+        $keyIdentifier->nodeValue = $this->identifier;
+        $securityTokenRef->appendChild($keyIdentifier);
+        $keyInfo->appendChild($securityTokenRef);
+        $parent->appendChild($keyInfo);
     }
 }

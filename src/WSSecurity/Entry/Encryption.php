@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\WSSecurity\Entry;
 
+use DOMDocument;
 use RobRichards\WsePhp\WSSESoap;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
 use Soap\Psr18WsseMiddleware\WSSecurity\DataEncryptionMethod;
@@ -10,7 +11,6 @@ use Soap\Psr18WsseMiddleware\WSSecurity\KeyEncryptionMethod;
 use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier\KeyIdentifier;
 use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\KeyInterface;
 use Soap\Psr18WsseMiddleware\WSSecurity\Xml\Locator\EncryptedKeyLocator;
-use VeeWee\Xml\Dom\Document;
 
 final class Encryption implements WsseEntry
 {
@@ -19,7 +19,7 @@ final class Encryption implements WsseEntry
 
     private DataEncryptionMethod $dataEncryptionMethod = DataEncryptionMethod::AES256_CBC;
     private KeyEncryptionMethod $keyEncryptionMethod = KeyEncryptionMethod::RSA_OAEP_MGF1P;
-    
+
     private bool $encryptSignature = true;
 
     public function __construct(KeyInterface $key, KeyIdentifier $keyIdentifier)
@@ -52,7 +52,7 @@ final class Encryption implements WsseEntry
         return $new;
     }
 
-    public function __invoke(Document $envelope, WSSESoap $wsse): void
+    public function __invoke(DOMDocument $envelope, WSSESoap $wsse): void
     {
         $dataEncryptionKey = new XMLSecurityKey($this->dataEncryptionMethod->value);
         $dataEncryptionKey->generateSessionKey();

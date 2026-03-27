@@ -62,15 +62,15 @@ final class WsaMiddlewareTest extends TestCase
         static::assertEquals(1, $xpath->query('//soap:Header/wsa:ReplyTo/wsa:Address')->count(), 'No WSA ReplyTo Address tag');
 
         // Check defaults:
-        static::assertEquals('myaction', $xpath->query('//soap:Header/wsa:Action')->item(0)->nodeValue);
-        static::assertEquals('/endpoint', $xpath->query('//soap:Header/wsa:To')->item(0)->nodeValue);
+        static::assertEquals('myaction', $xpath->query('//soap:Header/wsa:Action')->item(0)->textContent);
+        static::assertEquals('/endpoint', $xpath->query('//soap:Header/wsa:To')->item(0)->textContent);
         static::assertMatchesRegularExpression(
             '/^uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i',
-            $xpath->query('//soap:Header/wsa:MessageID')->item(0)->nodeValue
+            $xpath->query('//soap:Header/wsa:MessageID')->item(0)->textContent
         );
         static::assertEquals(
             WsaMiddleware::WSA_ADDRESS_ANONYMOUS,
-            $xpath->query('//soap:Header/wsa:ReplyTo/wsa:Address')->item(0)->nodeValue
+            $xpath->query('//soap:Header/wsa:ReplyTo/wsa:Address')->item(0)->textContent
         );
     }
 

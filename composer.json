@@ -19,17 +19,18 @@
         }
     ],
     "require": {
-        "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+        "php": "~8.4.0 || ~8.5.0",
         "ext-dom": "*",
         "ext-openssl": "*",
-        "php-standard-library/php-standard-library": "^3.0 || ^4.0 || ^5.0 || ^6.0",
+        "php-standard-library/file": "^6.1",
+        "php-standard-library/foundation": "^6.1",
+        "php-standard-library/type": "^6.1",
         "paragonie/hidden-string": "^2.0",
-        "php-soap/psr18-transport": "^1.8",
-        "php-soap/engine": "^2.16",
-        "php-soap/xml": "^1.9",
-        "php-http/client-common": "^2.3",
-        "robrichards/wse-php": "^2.0",
-        "veewee/xml": "^3.0"
+        "php-soap/psr18-transport": "^2.0",
+        "php-soap/engine": "^2.20",
+        "php-soap/xml": "^1.10",
+        "php-http/client-common": "^2.7",
+        "robrichards/wse-php": "^2.0"
     },
     "require-dev": {
         "nyholm/psr7": "^1.5",

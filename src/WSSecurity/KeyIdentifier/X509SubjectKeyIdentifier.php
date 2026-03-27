@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
 
+use DOMDocument;
 use DOMElement;
 use RobRichards\WsePhp\WSSESoap;
 use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\Certificate;
-use VeeWee\Xml\Dom\Document;
 use function Psl\Type\string;
 
 final class X509SubjectKeyIdentifier implements KeyIdentifier
@@ -18,7 +18,7 @@ final class X509SubjectKeyIdentifier implements KeyIdentifier
     {
     }
 
-    public function __invoke(Document $envelope, WSSESoap $wsse, DOMElement $parent): void
+    public function __invoke(DOMDocument $envelope, WSSESoap $wsse, DOMElement $parent): void
     {
         $x509 = openssl_x509_parse($this->certificate->contents());
         if ($x509 === false) {
