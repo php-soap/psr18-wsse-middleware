@@ -184,17 +184,16 @@ use Soap\Psr18WsseMiddleware\WSSecurity\DigestMethod;
 use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
 use Soap\Psr18WsseMiddleware\WsseMiddleware;
 use Soap\Psr18WsseMiddleware\WSSecurity\Entry;
-use VeeWee\Xml\Dom\Document;
-use function VeeWee\Xml\Dom\Locator\document_element;
 
 $privKey = Key::fromFile('security_token.priv')->withPassphrase('xxx');
 
 // These are provided through the STS service.
-$samlAssertion = Document::fromXmlString(<<<EOXML
+$samlAssertion = new DOMDocument();
+$samlAssertion->loadXML(<<<EOXML
 <saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:1.0:assertion" AssertionID="xxxx" />
 EOXML
 );
-$samlAssertionId = $samlAssertion->locate(document_element())->getAttribute('AssertionID');
+$samlAssertionId = $samlAssertion->documentElement->getAttribute('AssertionID');
 
 $wsseMiddleware = new WsseMiddleware(
     outgoing: [

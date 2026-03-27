@@ -3,13 +3,10 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier;
 
+use DOMDocument;
 use DOMElement;
 use RobRichards\WsePhp\WSSESoap;
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
-use VeeWee\Xml\Dom\Document;
-use function VeeWee\Xml\Dom\Builder\attribute;
-use function VeeWee\Xml\Dom\Builder\children;
-use function VeeWee\Xml\Dom\Builder\namespaced_element;
 
 final class ReferencingKeyIdentifier implements KeyIdentifier
 {
@@ -22,32 +19,15 @@ final class ReferencingKeyIdentifier implements KeyIdentifier
         $this->valueType = $valueType;
     }
 
-    /**
-     * @psalm-suppress ArgumentTypeCoercion - psalm is not able to determine DOMNode - DOMElement confusion for now.
-     */
-    public function __invoke(Document $envelope, WSSESoap $wsse, DOMElement $parent): void
+    public function __invoke(DOMDocument $envelope, WSSESoap $wsse, DOMElement $parent): void
     {
-        $keyInfo = $envelope->build(
-            namespaced_element(
-                XMLSecurityDSig::XMLDSIGNS,
-                'ds:KeyInfo',
-                children(
-                    namespaced_element(
-                        WSSESoap::WSSENS,
-                        WSSESoap::WSSEPFX . ':SecurityTokenReference',
-                        children(
-                            namespaced_element(
-                                WSSESoap::WSSENS,
-                                WSSESoap::WSSEPFX . ':Reference',
-                                attribute('ValueType', $this->valueType),
-                                attribute('URI', '#' . $this->uriReference)
-                            )
-                        )
-                    )
-                )
-            )
-        );
-
-        $parent->append(...$keyInfo);
+        $keyInfo = $envelope->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
+        $securityTokenRef = $envelope->createElementNS(WSSESoap::WSSENS, WSSESoap::WSSEPFX . ':SecurityTokenReference');
+        $reference = $envelope->createElementNS(WSSESoap::WSSENS, WSSESoap::WSSEPFX . ':Reference');
+        $reference->setAttribute('ValueType', $this->valueType);
+        $reference->setAttribute('URI', '#' . $this->uriReference);
+        $securityTokenRef->appendChild($reference);
+        $keyInfo->appendChild($securityTokenRef);
+        $parent->appendChild($keyInfo);
     }
 }

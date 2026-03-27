@@ -3,35 +3,25 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\WSSecurity\Xml\Xpath;
 
+use DOMDocument;
 use DOMXPath;
 use RobRichards\WsePhp\WSSESoap;
 use RobRichards\XMLSecLibs\XMLSecEnc;
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use Soap\Xml\Xmlns;
-use VeeWee\Xml\Dom\Document;
-use VeeWee\Xml\Dom\Xpath\Configurator\Configurator;
-use function VeeWee\Xml\Dom\Locator\root_namespace_uri;
-use function VeeWee\Xml\Dom\Xpath\Configurator\namespaces;
 
-final class WssePreset implements Configurator
+final class WssePreset
 {
-    private Document $document;
-
-    public function __construct(Document $document)
+    public static function xpath(DOMDocument $document): DOMXPath
     {
-        $this->document = $document;
-    }
+        $xpath = new DOMXPath($document);
+        $rootNs = $document->documentElement?->namespaceURI ?? Xmlns::soap12Envelope()->value();
+        $xpath->registerNamespace('wssoap', $rootNs);
+        $xpath->registerNamespace('wswsse', WSSESoap::WSSENS);
+        $xpath->registerNamespace('wsu', WSSESoap::WSUNS);
+        $xpath->registerNamespace('ds', XMLSecurityDSig::XMLDSIGNS);
+        $xpath->registerNamespace('xenc', XMLSecEnc::XMLENCNS);
 
-    public function __invoke(DOMXPath $xpath): DOMXPath
-    {
-        return namespaces(
-            [
-                'wssoap' => $this->document->locate(root_namespace_uri()) ?? Xmlns::soap12Envelope()->value(),
-                'wswsse' => WSSESoap::WSSENS,
-                'wsu' => WSSESoap::WSUNS,
-                'ds' => XMLSecurityDSig::XMLDSIGNS,
-                'xenc' => XMLSecEnc::XMLENCNS,
-            ],
-        )($xpath);
+        return $xpath;
     }
 }

@@ -87,8 +87,8 @@ final class WsseMiddlewareTest extends TestCase
             (string) $xpath->query('//ds:SignatureMethod')->item(0)->getAttribute('Algorithm')
         );
         static::assertEquals(
-            strtotime((string) $xpath->query('//wsu:Created')->item(0)->nodeValue),
-            strtotime((string) $xpath->query('//wsu:Expires')->item(0)->nodeValue) - 3600
+            strtotime((string) $xpath->query('//wsu:Created')->item(0)->textContent),
+            strtotime((string) $xpath->query('//wsu:Expires')->item(0)->textContent) - 3600
         );
     }
 
@@ -107,8 +107,8 @@ final class WsseMiddlewareTest extends TestCase
         $xpath = $this->fetchEnvelopeXpath($soapBody);
 
         static::assertEquals(
-            strtotime((string) $xpath->query('//wsu:Created')->item(0)->nodeValue),
-            strtotime((string) $xpath->query('//wsu:Expires')->item(0)->nodeValue) - 100
+            strtotime((string) $xpath->query('//wsu:Created')->item(0)->textContent),
+            strtotime((string) $xpath->query('//wsu:Expires')->item(0)->textContent) - 100
         );
     }
 
@@ -192,8 +192,8 @@ final class WsseMiddlewareTest extends TestCase
         static::assertEquals($xpath->query('//wsse:Security/wsse:UsernameToken/wsu:Created')->count(), 1, 'No WSU Created tag');
 
         // Check values:
-        static::assertEquals('username', (string) $xpath->query('//wsse:Username')->item(0)->nodeValue);
-        static::assertEquals('password', (string) $xpath->query('//wsse:Password')->item(0)->nodeValue);
+        static::assertEquals('username', (string) $xpath->query('//wsse:Username')->item(0)->textContent);
+        static::assertEquals('password', (string) $xpath->query('//wsse:Password')->item(0)->textContent);
         static::assertEquals(
             'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText',
             (string) $xpath->query('//wsse:Password')->item(0)->getAttribute('Type')
@@ -223,8 +223,8 @@ final class WsseMiddlewareTest extends TestCase
         static::assertEquals($xpath->query('//wsse:Security/wsse:UsernameToken/wsu:Created')->count(), 1, 'No WSU Created tag');
 
         // Check values:
-        static::assertEquals('username', (string) $xpath->query('//wsse:Username')->item(0)->nodeValue);
-        static::assertNotEquals('password', (string) $xpath->query('//wsse:Password')->item(0)->nodeValue);
+        static::assertEquals('username', (string) $xpath->query('//wsse:Username')->item(0)->textContent);
+        static::assertNotEquals('password', (string) $xpath->query('//wsse:Password')->item(0)->textContent);
         static::assertEquals(
             'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest',
             (string) $xpath->query('//wsse:Password')->item(0)->getAttribute('Type')

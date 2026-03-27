@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\WSSecurity\Entry;
 
+use DOMDocument;
 use RobRichards\WsePhp\WSSESoap;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
 use Soap\Psr18WsseMiddleware\WSSecurity\DigestMethod;
@@ -10,7 +11,6 @@ use Soap\Psr18WsseMiddleware\WSSecurity\KeyIdentifier\KeyIdentifier;
 use Soap\Psr18WsseMiddleware\WSSecurity\KeyStore\KeyInterface;
 use Soap\Psr18WsseMiddleware\WSSecurity\SignatureMethod;
 use Soap\Psr18WsseMiddleware\WSSecurity\Xml\Locator\SignatureLocator;
-use VeeWee\Xml\Dom\Document;
 
 final class Signature implements WsseEntry
 {
@@ -92,7 +92,7 @@ final class Signature implements WsseEntry
         return $new;
     }
 
-    public function __invoke(Document $envelope, WSSESoap $wsse): void
+    public function __invoke(DOMDocument $envelope, WSSESoap $wsse): void
     {
         $securityKey = new XMLSecurityKey($this->signatureMethod->value, ['type' => 'private']);
         $securityKey->passphrase = $this->privateKey->passphrase();

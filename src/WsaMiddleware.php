@@ -7,8 +7,7 @@ use Http\Promise\Promise;
 use Psr\Http\Message\RequestInterface;
 use RobRichards\WsePhp\WSASoap;
 use Soap\Psr18Transport\HttpBinding\SoapActionDetector;
-use Soap\Psr18Transport\Xml\XmlMessageManipulator;
-use VeeWee\Xml\Dom\Document;
+use Soap\Psr18WsseMiddleware\WSSecurity\Xml\Legacy\LegacyInterop;
 
 final class WsaMiddleware implements Plugin
 {
@@ -23,17 +22,14 @@ final class WsaMiddleware implements Plugin
 
     public function handleRequest(RequestInterface $request, callable $next, callable $first): Promise
     {
-        return $next(
-            (new XmlMessageManipulator)(
-                $request,
-                function (Document $document) use ($request) : void {
-                    $wsa = new WSASoap($document->toUnsafeDocument());
-                    $wsa->addAction(SoapActionDetector::detectFromRequest($request));
-                    $wsa->addTo((string) $request->getUri());
-                    $wsa->addMessageID();
-                    $wsa->addReplyTo($this->address);
-                }
-            )
-        );
+        $legacyDoc = LegacyInterop::parseBody((string) $request->getBody());
+
+        $wsa = new WSASoap($legacyDoc);
+        $wsa->addAction(SoapActionDetector::detectFromRequest($request));
+        $wsa->addTo((string) $request->getUri());
+        $wsa->addMessageID();
+        $wsa->addReplyTo($this->address);
+
+        return $next($request->withBody(LegacyInterop::toStream($legacyDoc)));
     }
 }
