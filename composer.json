@@ -36,7 +36,7 @@
         "nyholm/psr7": "^1.5",
         "php-http/mock-client": "^1.5",
         "symfony/http-client": "^7.1",
-        "phpunit/phpunit": "~12.3",
+        "phpunit/phpunit": "~13.1",
         "vimeo/psalm": "~6.13",
         "php-cs-fixer/shim": "~3.88",
         "cweagans/composer-patches": "^1.7"
