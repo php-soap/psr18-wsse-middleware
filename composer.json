@@ -35,7 +35,7 @@
     "require-dev": {
         "nyholm/psr7": "^1.5",
         "php-http/mock-client": "^1.5",
-        "symfony/http-client": "^7.1",
+        "symfony/http-client": "^8.1",
         "phpunit/phpunit": "~12.3",
         "vimeo/psalm": "~6.13",
         "php-cs-fixer/shim": "~3.88",
