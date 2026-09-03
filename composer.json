@@ -54,7 +54,7 @@
         "php-cs-fixer/shim": "~3.88",
         "php-standard-library/psalm-plugin": "^2.4",
         "carthage-software/mago": "^1.43",
-        "php-soap/psr18-attachments-middleware": "^0.12"
+        "php-soap/psr18-attachments-middleware": "~0.12"
     },
     "config": {
         "allow-plugins": {
