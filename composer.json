@@ -50,7 +50,7 @@
         "php-http/mock-client": "^1.5",
         "symfony/http-client": "^7.1",
         "phpunit/phpunit": "~12.3",
-        "vimeo/psalm": "~6.13",
+        "vimeo/psalm": "~7.0",
         "php-cs-fixer/shim": "~3.88",
         "php-standard-library/psalm-plugin": "^2.4",
         "carthage-software/mago": "^1.43",
