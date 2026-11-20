@@ -1,6 +1,7 @@
 {
     "name": "php-soap/psr18-wsse-middleware",
     "description": "Adds WSSE security to your HTTP SOAP Transport",
+    "type": "library",
     "license": "MIT",
     "autoload": {
         "psr-4": {
