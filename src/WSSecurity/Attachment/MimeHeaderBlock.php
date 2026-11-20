@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\WSSecurity\Attachment;
 
+use Psl\MIME\Exception\InvalidArgumentException;
 use Psl\MIME\Headers;
 use Soap\Psr18WsseMiddleware\WSSecurity\Exception\MalformedAttachmentHeaders;
 use Soap\Psr18WsseMiddleware\WSSecurity\Exception\UnsupportedAttachmentHeaderForm;
@@ -99,8 +100,8 @@ final readonly class MimeHeaderBlock
      * Splits octets at the first blank line into the headers they carry and the bytes after them.
      *
      * Read here rather than through a general MIME reader, because two of the rules are the point: a line
-     * carrying no colon is refused rather than skipped, and a folded one is left folded, since a peer
-     * restores what it split rather than what it could make sense of. The caps bound the scan.
+     * carrying no colon is refused rather than skipped, and so is a folded one, since a peer restores what
+     * it split rather than what it could make sense of. The caps bound the scan.
      *
      * @throws MalformedAttachmentHeaders
      */
@@ -123,7 +124,13 @@ final readonly class MimeHeaderBlock
             $offset = $end + 2;
 
             if ($line === '') {
-                return new DecodedPart(Headers::fromPairs($pairs), substr($octets, $offset));
+                try {
+                    $headers = Headers::fromPairs($pairs);
+                } catch (InvalidArgumentException $error) {
+                    throw MalformedAttachmentHeaders::invalidHeader($error);
+                }
+
+                return new DecodedPart($headers, substr($octets, $offset));
             }
 
             if (count($pairs) === self::MAX_HEADERS) {
@@ -144,8 +151,6 @@ final readonly class MimeHeaderBlock
      */
     private function canonicalValue(string $name, string $value): string
     {
-        $value = $this->unfold($value);
-
         if ($name === 'Content-Description') {
             throw UnsupportedAttachmentHeaderForm::contentDescription();
         }
@@ -158,14 +163,6 @@ final readonly class MimeHeaderBlock
         }
 
         return $value;
-    }
-
-    /**
-     * Removes a line break that a fold introduced, keeping the whitespace that follows it.
-     */
-    private function unfold(string $value): string
-    {
-        return (string) preg_replace('/(?:\r\n|\r|\n)(?=[ \t])/', '', $value);
     }
 
     /**

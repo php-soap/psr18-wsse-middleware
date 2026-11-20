@@ -313,7 +313,7 @@ one. Measured against a live peer: it is the only one of the five that a peer ca
 stripping the whitespace a MIME parser leaves after the colon, so what it digests depends on whether its own
 parser trimmed that separator. Nothing this side can compute predicts that, and neither this package nor the
 peer emits the header, so refusing costs nothing a caller did not add deliberately. `Content-Transfer-Encoding` is not among them, so it is
-neither signed nor encrypted even though the multipart carries it. Values are unfolded, stripped of leading
+neither signed nor encrypted even though the multipart carries it. Values are stripped of leading
 whitespace, and a value carrying parameters is rewritten with its essence and parameter names lowercased, its
 parameters sorted, and their values quoted. The values of the case-insensitive parameters are lowercased too,
 those being `charset`, `creation-date`, `filename`, `modification-date`, `padding`, `read-date`, `size` and
