@@ -3,19 +3,18 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\OpenSSL\Parser;
 
-use phpseclib3\File\ASN1;
-use phpseclib3\File\X509;
+use phpseclib4\File\ASN1;
+use phpseclib4\File\ASN1\Types\BaseString;
+use phpseclib4\File\ASN1\Types\OID;
+use phpseclib4\File\X509;
 use Psl\Type\Exception\CoercionException;
 use Soap\Psr18WsseMiddleware\KeyStore\Certificate;
 use Soap\Psr18WsseMiddleware\KeyStore\Metadata\DistinguishedName;
 use Soap\Psr18WsseMiddleware\OpenSSL\Exception\CryptoOperationFailed;
 use Throwable;
-use function Psl\Type\dict;
-use function Psl\Type\mixed;
-use function Psl\Type\non_empty_string;
+use function Psl\Type\instance_of;
 use function Psl\Type\non_empty_vec;
 use function Psl\Type\shape;
-use function Psl\Type\string;
 use function Psl\Type\vec;
 
 /**
@@ -57,17 +56,12 @@ final class DistinguishedNameParser
     public function parse(Certificate $certificate): array
     {
         try {
-            $x509 = new X509();
-            if ($x509->loadX509($certificate->contents()) === false) {
-                throw CryptoOperationFailed::unreadableCertificate();
-            }
+            $x509 = X509::load($certificate->contents());
 
             return [
                 'subject' => $this->fromEncodedName($x509->getSubjectDN(X509::DN_ARRAY)),
                 'issuer' => $this->fromEncodedName($x509->getIssuerDN(X509::DN_ARRAY)),
             ];
-        } catch (CryptoOperationFailed $exception) {
-            throw $exception;
         } catch (Throwable) {
             throw CryptoOperationFailed::unreadableCertificate();
         }
@@ -89,8 +83,8 @@ final class DistinguishedNameParser
         try {
             $sequence = shape([
                 'rdnSequence' => vec(non_empty_vec(shape([
-                    'type' => non_empty_string(),
-                    'value' => mixed(),
+                    'type' => instance_of(OID::class),
+                    'value' => instance_of(BaseString::class),
                 ], true))),
             ], true)->coerce($name);
         } catch (CoercionException) {
@@ -103,7 +97,8 @@ final class DistinguishedNameParser
             foreach ($relativeName as $pair) {
                 $pairs[] = [
                     'type' => $this->type($pair['type']),
-                    'value' => $this->value($pair['value']),
+                    // The string as encoded: a BMPString or TeletexString value is not transcoded here.
+                    'value' => $pair['value']->value,
                 ];
             }
 
@@ -114,36 +109,19 @@ final class DistinguishedNameParser
     }
 
     /**
-     * @param non-empty-string $type
-     *
      * @return non-empty-string
-     */
-    private function type(string $type): string
-    {
-        // The encoded name may name its type by label or by raw object identifier; both normalize to the
-        // identifier, which is what the short-name table is keyed by.
-        $oid = ASN1::getOID($type);
-
-        return self::SHORT_NAMES[$oid] ?? ($oid === '' ? $type : $oid);
-    }
-
-    /**
-     * The value carries its ASN.1 string type as the key it sits under, and only the text matters here.
      *
-     * @throws CryptoOperationFailed when the value holds no text form to render
+     * @throws CryptoOperationFailed when the attribute type is empty
      */
-    private function value(mixed $value): string
+    private function type(OID $type): string
     {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        try {
-            $texts = vec(string())->coerce(array_values(dict(non_empty_string(), mixed())->coerce($value)));
-        } catch (CoercionException) {
+        // The OID renders as its label when phpseclib knows one and as the dotted identifier otherwise; both
+        // normalize to the identifier, which is what the short-name table is keyed by.
+        $oid = ASN1::getOIDFromName((string) $type);
+        if ($oid === '') {
             throw CryptoOperationFailed::unreadableCertificate();
         }
 
-        return $texts[0] ?? throw CryptoOperationFailed::unreadableCertificate();
+        return self::SHORT_NAMES[$oid] ?? $oid;
     }
 }

@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 namespace SoapTest\Psr18WsseMiddleware\Unit\OpenSSL;
 
-use phpseclib3\Crypt\RSA;
-use phpseclib3\File\X509;
+use phpseclib4\Crypt\RSA;
+use phpseclib4\File\CRL;
+use phpseclib4\File\X509;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psl\DateTime\Timestamp;
@@ -132,13 +133,10 @@ final class RevocationCheckTest extends TestCase
         // encoded sequence least-specific first, while RFC 2253 (and so DistinguishedName) is most-specific
         // first, which made every multi-attribute issuer compare unequal and rejected every signer. The fixtures
         // carry a three-component DN precisely so a CN-only name cannot hide it again.
-        $crl = new X509();
-        static::assertNotFalse($crl->loadCRL(
-            file_get_contents(FIXTURE_DIR.'/certificates/revocation/crl-empty.pem'),
-        ));
+        $crl = CRL::load(file_get_contents(FIXTURE_DIR.'/certificates/revocation/crl-empty.pem'));
 
         $names = new DistinguishedNameParser();
-        $listIssuer = $names->fromEncodedName($crl->getIssuerDN(X509::DN_ARRAY));
+        $listIssuer = $names->fromEncodedName($crl->getIssuerDN(CRL::DN_ARRAY));
         $certificateIssuer = $this->certificate('leaf.crt')->info()->issuerSerial()->issuer;
 
         static::assertTrue($listIssuer->equals($certificateIssuer));
@@ -150,15 +148,9 @@ final class RevocationCheckTest extends TestCase
         // A list with no nextUpdate can never be shown to be current, so it must not be read as valid forever.
         // Openssl refuses to emit one at all, so it is minted here with phpseclib, whose CRL writer omits it:
         // the same quirk that makes that writer unusable for the real fixtures.
-        $issuer = new X509();
-        $issuer->loadX509(file_get_contents(FIXTURE_DIR.'/certificates/revocation/ca.crt'));
-        $issuer->setPrivateKey(
-            RSA::load(file_get_contents(FIXTURE_DIR.'/certificates/revocation/ca.key')),
-        );
-
-        $writer = new X509();
-        $minted = $writer->saveCRL($writer->signCRL($issuer, $writer));
-        static::assertStringNotContainsString('nextUpdate', var_export($writer->loadCRL($minted), true));
+        $writer = $this->crlWriter();
+        $minted = $this->signedByRevocationCa($writer);
+        static::assertArrayNotHasKey('nextUpdate', CRL::load($minted)->toArray()['tbsCertList']);
 
         $this->assertRejectedBecause(
             'past its nextUpdate',
@@ -220,16 +212,10 @@ final class RevocationCheckTest extends TestCase
         // empty list stand in for the one currently naming a compromised serial, which is the same un-revoking
         // the anchor-signature rule exists to stop, reached through the clock instead of the key. Openssl dates
         // a CRL at generation time and offers no way to postdate one, so it is minted here.
-        $issuer = new X509();
-        $issuer->loadX509(file_get_contents(FIXTURE_DIR.'/certificates/revocation/ca.crt'));
-        $issuer->setPrivateKey(
-            RSA::load(file_get_contents(FIXTURE_DIR.'/certificates/revocation/ca.key')),
-        );
-
-        $writer = new X509();
-        $writer->setStartDate('+30 days');
-        $writer->setEndDate('+60 days');
-        $minted = $writer->saveCRL($writer->signCRL($issuer, $writer));
+        $writer = $this->crlWriter();
+        $writer->setThisDate('+30 days');
+        $writer->setNextDate('+60 days');
+        $minted = $this->signedByRevocationCa($writer);
 
         $this->assertRejectedBecause(
             'thisUpdate in the future',
@@ -239,6 +225,39 @@ final class RevocationCheckTest extends TestCase
                     ->withRevocationLists(new CertificateRevocationList($minted)),
             ),
         );
+    }
+
+    public function test_a_ca_registered_with_phpseclib_elsewhere_does_not_vouch_for_a_list(): void
+    {
+        // Phpseclib verifies a list against a process-wide CA store. An impostor with the real issuer's name,
+        // registered there by unrelated code, must not be able to vouch for a list this trust store never
+        // trusted, and the store must be handed back the way it was found.
+        $key = RSA::createKey(2048);
+        $impostor = new X509($key->getPublicKey());
+        $realIssuer = X509::load(file_get_contents(FIXTURE_DIR.'/certificates/revocation/ca.crt'));
+        $impostor->setSubjectDN($realIssuer->getSubjectDN(X509::DN_ARRAY));
+        $impostor->setIssuerDN($realIssuer->getSubjectDN(X509::DN_ARRAY));
+        $key->sign($impostor);
+
+        $forged = new CRL();
+        $forged->copySigningX509Attributes($impostor);
+        $forged->setNextDate('+1 year');
+        $key->sign($forged);
+
+        X509::addCA($impostor);
+        try {
+            $this->assertRejectedBecause(
+                'not signed by a configured trust anchor',
+                fn (): mixed => (new CertificateTrust())->verify(
+                    CertificateChain::fromCertificates($this->certificate('leaf.crt')),
+                    TrustStore::fromCertificates($this->certificate('ca.crt'))
+                        ->withRevocationLists(new CertificateRevocationList((string) $forged)),
+                ),
+            );
+            static::assertCount(1, X509::getCAs());
+        } finally {
+            X509::clearCAStore();
+        }
     }
 
     public function test_a_list_that_cannot_be_parsed_is_refused(): void
@@ -314,6 +333,24 @@ final class RevocationCheckTest extends TestCase
     private function certificate(string $file): Certificate
     {
         return Certificate::fromFile(FIXTURE_DIR.'/certificates/revocation/'.$file);
+    }
+
+    private function crlWriter(): CRL
+    {
+        $writer = new CRL();
+        $writer->copySigningX509Attributes(
+            X509::load(file_get_contents(FIXTURE_DIR.'/certificates/revocation/ca.crt')),
+        );
+
+        return $writer;
+    }
+
+    private function signedByRevocationCa(CRL $writer): string
+    {
+        $key = RSA::loadPrivateKey(file_get_contents(FIXTURE_DIR.'/certificates/revocation/ca.key'));
+        $key->sign($writer);
+
+        return (string) $writer;
     }
 
     private function revocationList(string $file): CertificateRevocationList

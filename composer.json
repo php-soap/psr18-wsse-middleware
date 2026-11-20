@@ -40,7 +40,8 @@
         "php-standard-library/hash": "^6.1",
         "php-standard-library/mime": "^6.4",
         "phpro/resource-stream": "^1.4",
-        "phpseclib/phpseclib": "^3.0"
+        "phpseclib/phpseclib": "^4.0",
+        "psr/http-factory-implementation": "*"
     },
     "suggest": {
         "ext-gmp": "For native-speed RSA and ECDSA (key transport and signatures); phpseclib uses it when present",

@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\OpenSSL;
 
-use phpseclib3\Crypt\AES;
-use phpseclib3\Crypt\Common\BlockCipher;
-use phpseclib3\Crypt\TripleDES;
+use phpseclib4\Crypt\AES;
+use phpseclib4\Crypt\Common\BlockCipher;
+use phpseclib4\Crypt\TripleDES;
 use SensitiveParameter;
 use Soap\Psr18WsseMiddleware\Algorithm\DataEncryptionMethod;
 use Soap\Psr18WsseMiddleware\KeyStore\SessionKey;

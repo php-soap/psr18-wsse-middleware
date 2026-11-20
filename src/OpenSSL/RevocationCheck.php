@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\OpenSSL;
 
-use phpseclib3\File\X509;
+use DateTimeInterface;
+use phpseclib4\File\CRL;
+use phpseclib4\File\X509;
+use phpseclib4\Math\BigInteger;
 use Psl\DateTime\Timestamp;
 use Soap\Psr18WsseMiddleware\KeyStore\Certificate;
 use Soap\Psr18WsseMiddleware\KeyStore\CertificateRevocationList;
@@ -16,8 +19,6 @@ use Throwable;
 use function Psl\Type\array_key;
 use function Psl\Type\dict;
 use function Psl\Type\mixed;
-use function Psl\Type\string;
-use function Psl\Type\vec;
 
 /**
  * Decides whether a certificate that already chains to an anchor has been revoked, against the revocation lists
@@ -68,7 +69,7 @@ final class RevocationCheck
      * names the serial. Picking either would let the order an integrator happens to pass them in decide whether a
      * revoked signer is accepted. A serial named by any current list is revoked.
      *
-     * @return non-empty-list<X509>
+     * @return non-empty-list<CRL>
      *
      * @throws CertificateTrustException
      */
@@ -82,7 +83,7 @@ final class RevocationCheck
             // One unusable entry must not end the search: a later entry may be the one that covers this issuer.
             // Nothing is loosened by continuing, because a signer no list covers is still refused below.
             try {
-                $parsed = $this->parse($revocationList, $anchors);
+                $parsed = $this->parse($revocationList);
                 $covers = $this->issuerOf($parsed)->equals($issuer);
             } catch (CertificateTrustException $exception) {
                 $refusal ??= $exception;
@@ -96,7 +97,7 @@ final class RevocationCheck
 
             // Trust is asserted only for a list that actually covers this issuer, so an unrelated untrusted list
             // in the store cannot fail a verification it has no bearing on.
-            if ($parsed->validateSignature() !== true) {
+            if (!$this->isSignedByAnAnchor($parsed, $anchors)) {
                 // A covering list that cannot be believed is the most specific reason available, so it outranks
                 // any earlier unreadable entry when reporting.
                 $refusal = CertificateTrustException::revocationListUntrusted();
@@ -126,43 +127,65 @@ final class RevocationCheck
     }
 
     /**
-     * @param list<Certificate> $anchors
-     *
      * @throws CertificateTrustException
      */
-    private function parse(CertificateRevocationList $revocationList, array $anchors): X509
+    private function parse(CertificateRevocationList $revocationList): CRL
     {
-        $reader = new X509();
-        // One anchor per call: loadCA reads a single certificate, so handing it a concatenated bundle registers
-        // whichever one comes first and silently discards the rest. Every list would then have to be issued by
-        // that one anchor, and a two-partner store would refuse every message from the second partner.
-        foreach ($anchors as $anchor) {
-            $reader->loadCA($anchor->contents());
-        }
-
         try {
-            if ($reader->loadCRL($revocationList->contents()) === false) {
-                throw CertificateTrustException::revocationListUnreadable();
-            }
-        } catch (CertificateTrustException $exception) {
-            throw $exception;
+            return CRL::load($revocationList->contents());
         } catch (Throwable) {
             throw CertificateTrustException::revocationListUnreadable();
         }
+    }
 
-        return $reader;
+    /**
+     * phpseclib verifies a list only against its process-wide CA store, so the store holds exactly this trust
+     * store's anchors for the duration of the check and is put back afterwards. Without that, an anchor some
+     * other code registered would be able to vouch for a list this trust store never trusted.
+     *
+     * One anchor per addCA call: it reads a single certificate, so handing it a concatenated bundle registers
+     * whichever one comes first and silently discards the rest. Every list would then have to be issued by that
+     * one anchor, and a two-partner store would refuse every message from the second partner.
+     *
+     * @param list<Certificate> $anchors
+     */
+    private function isSignedByAnAnchor(CRL $revocationList, array $anchors): bool
+    {
+        /** @var list<X509> $previous */
+        $previous = X509::getCAs();
+        X509::clearCAStore();
+
+        try {
+            foreach ($anchors as $anchor) {
+                // An anchor phpseclib cannot read vouches for nothing here, but must not stop the others vouching.
+                try {
+                    X509::addCA($anchor->contents());
+                } catch (Throwable) {
+                    continue;
+                }
+            }
+
+            return $revocationList->validateSignature();
+        } catch (Throwable) {
+            return false;
+        } finally {
+            X509::clearCAStore();
+            foreach ($previous as $ca) {
+                X509::addCA($ca);
+            }
+        }
     }
 
     /**
      * @throws CertificateTrustException
      */
-    private function issuerOf(X509 $revocationList): DistinguishedName
+    private function issuerOf(CRL $revocationList): DistinguishedName
     {
         // Rendered from the encoded sequence by the same code that renders a certificate's issuer. phpseclib's
         // DN_STRING joins the sequence least-specific first while RFC 2253 is most-specific first, so taking that
         // shortcut here made every multi-attribute issuer compare unequal and rejected every signer.
         try {
-            return $this->names->fromEncodedName($revocationList->getIssuerDN(X509::DN_ARRAY));
+            return $this->names->fromEncodedName($revocationList->getIssuerDN(CRL::DN_ARRAY));
         } catch (Throwable) {
             throw CertificateTrustException::revocationListUnreadable();
         }
@@ -177,11 +200,11 @@ final class RevocationCheck
      *
      * @throws CertificateTrustException
      */
-    private function assertCurrent(X509 $revocationList, Timestamp $now): void
+    private function assertCurrent(CRL $revocationList, Timestamp $now): void
     {
         // phpseclib returns the parsed structure untyped, so the shape is coerced here rather than trusted.
         try {
-            $parsed = dict(array_key(), mixed())->coerce($revocationList->getCurrentCert());
+            $parsed = dict(array_key(), mixed())->coerce($revocationList->toArray());
         } catch (Throwable) {
             throw CertificateTrustException::revocationListUnreadable();
         }
@@ -204,24 +227,24 @@ final class RevocationCheck
     /**
      * @throws CertificateTrustException
      */
-    private function assertRevokesNot(X509 $revocationList, SerialNumber $serialNumber): void
+    private function assertRevokesNot(CRL $revocationList, SerialNumber $serialNumber): void
     {
-        // listRevoked() reports serials in decimal, which is the form SerialNumber normalises to, so the
-        // comparison needs no base guessing and holds for serials beyond the platform integer range.
+        // SerialNumber is decimal, so the comparison is between integers rather than between renderings, and
+        // holds for serials beyond the platform integer range.
         try {
-            $revoked = vec(string())->coerce($revocationList->listRevoked());
+            $revoked = $revocationList->isRevoked(new BigInteger($serialNumber->toString(), 10));
         } catch (Throwable) {
             throw CertificateTrustException::revocationListUnreadable();
         }
 
-        if (in_array($serialNumber->toString(), $revoked, true)) {
+        if ($revoked) {
             throw CertificateTrustException::revoked();
         }
     }
 
     /**
      * One of the instants a CRL states, in whichever ASN.1 time form it used, as an epoch second: or null when
-     * it states none. The decoded string carries its own UTC offset, so the epoch it resolves to does not depend
+     * it states none. The decoded time carries its own UTC offset, so the epoch it resolves to does not depend
      * on the server's configured timezone.
      *
      * @param array<array-key, mixed> $parsed
@@ -241,16 +264,15 @@ final class RevocationCheck
         }
 
         foreach (['utcTime', 'generalTime'] as $form) {
-            if (!isset($stated[$form]) || !is_string($stated[$form]) || $stated[$form] === '') {
+            if (!isset($stated[$form])) {
                 continue;
             }
 
-            $instant = strtotime($stated[$form]);
-            if ($instant === false) {
+            if (!$stated[$form] instanceof DateTimeInterface) {
                 throw CertificateTrustException::revocationListUnreadable();
             }
 
-            return $instant;
+            return $stated[$form]->getTimestamp();
         }
 
         return null;

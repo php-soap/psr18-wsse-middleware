@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\OpenSSL;
 
-use phpseclib3\Crypt\PublicKeyLoader;
-use phpseclib3\Crypt\RSA;
-use phpseclib3\Crypt\RSA\PrivateKey;
-use phpseclib3\Crypt\RSA\PublicKey;
+use phpseclib4\Crypt\PublicKeyLoader;
+use phpseclib4\Crypt\RSA;
+use phpseclib4\Crypt\RSA\PrivateKey;
+use phpseclib4\Crypt\RSA\PublicKey;
 use SensitiveParameter;
 use Soap\Psr18WsseMiddleware\Algorithm\KeyTransportAlgorithm;
 use Soap\Psr18WsseMiddleware\KeyStore\Certificate;
@@ -41,12 +41,7 @@ final class KeyTransport
         }
 
         // A failure here is a non-oracle path (our recipient key / data), so the real reason may surface.
-        $wrapped = $configured->encrypt($sessionKey->bytes());
-        if (!is_string($wrapped)) {
-            throw CryptoOperationFailed::encryptionFailed();
-        }
-
-        return $wrapped;
+        return $configured->encrypt($sessionKey->bytes());
     }
 
     public function unwrap(
@@ -62,12 +57,7 @@ final class KeyTransport
                 throw CryptoOperationFailed::decryptionFailed();
             }
 
-            $sessionKey = $configured->decrypt($wrappedKey);
-            if (!is_string($sessionKey)) {
-                throw CryptoOperationFailed::decryptionFailed();
-            }
-
-            return SessionKey::fromBytes($sessionKey);
+            return SessionKey::fromBytes($configured->decrypt($wrappedKey));
         } catch (Throwable) {
             // Uniform: never reveal whether RSA padding was valid (Bleichenbacher / Marvin).
             throw CryptoOperationFailed::decryptionFailed();
