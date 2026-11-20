@@ -37,6 +37,7 @@
         "symfony/uid": "^7.4 || ^8.0",
         "php-standard-library/secure-random": "^6.1",
         "php-standard-library/hash": "^6.1",
+        "php-standard-library/mime": "^6.4",
         "phpro/resource-stream": "^1.4",
         "phpseclib/phpseclib": "^3.0"
     },

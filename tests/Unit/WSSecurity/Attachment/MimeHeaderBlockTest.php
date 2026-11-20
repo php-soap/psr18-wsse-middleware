@@ -84,19 +84,6 @@ final class MimeHeaderBlockTest extends TestCase
         );
     }
 
-    public function test_it_unfolds_a_folded_value(): void
-    {
-        $block = new MimeHeaderBlock();
-
-        static::assertSame(
-            "Content-Location:http://example.com/a long one.pdf\r\n"
-            ."Content-Type:text/plain;charset=\"us-ascii\"\r\n",
-            $block->canonicalize(Headers::fromPairs([
-                ['Content-Location', "http://example.com/a long\r\n one.pdf"],
-            ]))
-        );
-    }
-
     public function test_it_strips_leading_whitespace_from_a_value(): void
     {
         $block = new MimeHeaderBlock();
@@ -305,6 +292,26 @@ final class MimeHeaderBlockTest extends TestCase
         $this->expectExceptionMessage('carries no colon');
 
         $block->decode("this is not a header\r\n\r\nthe bytes");
+    }
+
+    public function test_it_refuses_a_header_name_a_mime_header_cannot_carry(): void
+    {
+        $block = new MimeHeaderBlock();
+
+        $this->expectException(MalformedAttachmentHeaders::class);
+        $this->expectExceptionMessage('carries a header that is not a valid MIME header');
+
+        $block->decode("Content-Location: http://example.com/a\r\n http://example.com/b\r\n\r\nthe bytes");
+    }
+
+    public function test_it_refuses_a_header_value_a_mime_header_cannot_carry(): void
+    {
+        $block = new MimeHeaderBlock();
+
+        $this->expectException(MalformedAttachmentHeaders::class);
+        $this->expectExceptionMessage('carries a header that is not a valid MIME header');
+
+        $block->decode("Content-ID: <invoice\0@example.com>\r\n\r\nthe bytes");
     }
 
     public function test_it_refuses_more_header_lines_than_the_cap_allows(): void

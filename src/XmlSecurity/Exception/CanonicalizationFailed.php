@@ -21,7 +21,7 @@ final class CanonicalizationFailed extends RuntimeException
     {
         return new self(sprintf(
             'Canonicalizing <%s> with %s produced an empty result; refusing to sign or digest empty canonical output.',
-            (string) $node->nodeName, // psalm's new-Dom stub underspecifies nodeName as mixed; it is a string
+            $node->nodeName,
             $method->name,
         ));
     }
@@ -51,7 +51,7 @@ final class CanonicalizationFailed extends RuntimeException
     {
         return new self(sprintf(
             'Canonicalizing <%s> while excluding it, or an ancestor of it, would leave nothing to digest.',
-            (string) $node->nodeName, // psalm's new-Dom stub underspecifies nodeName as mixed; it is a string
+            $node->nodeName,
         ));
     }
 
@@ -59,7 +59,7 @@ final class CanonicalizationFailed extends RuntimeException
     {
         return new self(sprintf(
             'The subtree to exclude is not inside <%s>, so canonicalizing it would exclude nothing.',
-            (string) $node->nodeName, // psalm's new-Dom stub underspecifies nodeName as mixed; it is a string
+            $node->nodeName,
         ));
     }
 
@@ -68,7 +68,7 @@ final class CanonicalizationFailed extends RuntimeException
         return new self(
             sprintf(
                 'Canonicalizing <%s> with %s failed inside libxml.',
-                (string) $node->nodeName, // psalm's new-Dom stub underspecifies nodeName as mixed; it is a string
+                $node->nodeName,
                 $method->name,
             ),
             0,
