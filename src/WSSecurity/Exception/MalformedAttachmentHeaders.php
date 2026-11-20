@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Soap\Psr18WsseMiddleware\WSSecurity\Exception;
 
 use RuntimeException;
+use Throwable;
 
 /**
  * Thrown when the octets opened out of an attachment's ciphertext do not carry a readable header block.
@@ -55,5 +56,14 @@ final class MalformedAttachmentHeaders extends RuntimeException
     public static function lineWithoutColon(): self
     {
         return new self('The opened attachment carries a header line that carries no colon.');
+    }
+
+    /**
+     * A name or value the MIME header collection refuses, such as a folded continuation line that happens
+     * to contain a colon, or a value carrying a NUL byte.
+     */
+    public static function invalidHeader(Throwable $previous): self
+    {
+        return new self('The opened attachment carries a header that is not a valid MIME header.', 0, $previous);
     }
 }

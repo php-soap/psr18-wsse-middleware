@@ -7,7 +7,6 @@ use Dom\Element;
 use function VeeWee\Xml\Dom\Locator\Attribute\attributes_list;
 use function VeeWee\Xml\Dom\Locator\Attribute\xmlns_attributes_list;
 use function VeeWee\Xml\Dom\Locator\Element\ancestors;
-use function VeeWee\Xml\Dom\Predicate\is_xmlns_attribute;
 
 /**
  * Derives the exclusive-c14n InclusiveNamespaces PrefixList for an element: the namespace prefixes an
@@ -35,8 +34,9 @@ final class InclusivePrefixes
     {
         $used = [$element->prefix ?? '#default'];
         foreach (attributes_list($element) as $attribute) {
-            if ($attribute->prefix !== null && !is_xmlns_attribute($attribute)) {
-                $used[] = (string) $attribute->prefix;
+            // The xmlns prefix is reserved for namespace declarations, which are not prefix usages.
+            if ($attribute->prefix !== null && $attribute->prefix !== 'xmlns') {
+                $used[] = $attribute->prefix;
             }
         }
 
@@ -65,7 +65,7 @@ final class InclusivePrefixes
             foreach (xmlns_attributes_list($ancestor) as $declaration) {
                 // A declaration is either xmlns="…" for the default namespace or xmlns:prefix="…"; the
                 // PrefixList spells the former '#default'.
-                $prefixes[] = 'xmlns' === $declaration->nodeName ? '#default' : (string) $declaration->localName;
+                $prefixes[] = 'xmlns' === $declaration->nodeName ? '#default' : $declaration->localName;
             }
 
             // An ancestor built in memory carries no xmlns attribute yet, but serializing the document emits
@@ -73,7 +73,7 @@ final class InclusivePrefixes
             // derived before or after the round trip through the wire; for an ancestor parsed from the wire the
             // prefix is already declared above and dedupes away.
             if ($ancestor->prefix !== null) {
-                $prefixes[] = (string) $ancestor->prefix;
+                $prefixes[] = $ancestor->prefix;
             }
         }
 
