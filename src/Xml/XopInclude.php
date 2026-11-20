@@ -80,7 +80,7 @@ final class XopInclude
         /** @var Node $child */
         foreach ($element->childNodes as $child) {
             if ($child instanceof Text) {
-                if (trim((string) $child->data) !== '') {
+                if (trim($child->data) !== '') {
                     return null;
                 }
 

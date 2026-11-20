@@ -258,16 +258,17 @@ final class Encryption implements OutboundAction
      */
     private function externalPartEncryption(): ?ExternalPartEncryption
     {
-        if ($this->attachments === null) {
+        $attachments = $this->attachments;
+        if ($attachments === null) {
             return null;
         }
 
-        if ($this->attachments->coverage() !== ExternalPartCoverage::Content) {
+        if ($attachments->coverage() !== ExternalPartCoverage::Content) {
             throw UnsupportedAttachmentCoverage::outboundEncryption();
         }
 
         return new ExternalPartEncryption(
-            $this->attachments->collectSealed(),
+            $attachments->collectSealed(),
             AttachmentEncryptedDataType::ContentOnly->value,
             AttachmentEncryptedDataType::CIPHERTEXT_TRANSFORM,
         );

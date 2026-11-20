@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace Soap\Psr18WsseMiddleware\XmlSecurity\Signing;
 
+use Closure;
 use Dom\Element;
+use Dom\Node;
 use Soap\Psr18WsseMiddleware\Algorithm\SignatureCanonicalization;
 use Soap\Psr18WsseMiddleware\Algorithm\SignatureMethod;
 use Soap\Psr18WsseMiddleware\Xml\Namespaces;
@@ -48,7 +50,7 @@ final class SignedInfoBuilder
                     Namespaces::Ds->value,
                     Namespaces::Ds->qualify('CanonicalizationMethod'),
                     attribute('Algorithm', $canonicalization->value),
-                    ...$this->inclusiveNamespaces($inclusivePrefixes),
+                    children(...$this->inclusiveNamespaces($inclusivePrefixes)),
                 ),
                 namespaced_element(
                     Namespaces::Ds->value,
@@ -70,7 +72,7 @@ final class SignedInfoBuilder
                 Namespaces::Ds->value,
                 Namespaces::Ds->qualify('Transform'),
                 attribute('Algorithm', $transform->algorithm),
-                ...$this->inclusiveNamespaces($transform->inclusivePrefixes),
+                children(...$this->inclusiveNamespaces($transform->inclusivePrefixes)),
             ),
             $reference->transforms,
         );
@@ -107,7 +109,7 @@ final class SignedInfoBuilder
      *
      * @param list<string> $prefixes
      *
-     * @return list<callable>
+     * @return list<Closure(Node): Element>
      */
     private function inclusiveNamespaces(array $prefixes): array
     {
@@ -115,10 +117,10 @@ final class SignedInfoBuilder
             return [];
         }
 
-        return [children(namespaced_element(
+        return [namespaced_element(
             SignatureCanonicalization::EXC_C14N->value,
             'ec:InclusiveNamespaces',
             attribute('PrefixList', implode(' ', $prefixes)),
-        ))];
+        )];
     }
 }
