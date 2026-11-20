@@ -40,7 +40,8 @@
         "php-standard-library/hash": "^6.1",
         "php-standard-library/mime": "^6.4",
         "phpro/resource-stream": "^1.4",
-        "phpseclib/phpseclib": "^3.0"
+        "phpseclib/phpseclib": "^3.0",
+        "psr/http-factory-implementation": "*"
     },
     "suggest": {
         "ext-gmp": "For native-speed RSA and ECDSA (key transport and signatures); phpseclib uses it when present",
@@ -50,7 +51,7 @@
     "require-dev": {
         "nyholm/psr7": "^1.5",
         "php-http/mock-client": "^1.5",
-        "symfony/http-client": "^7.1",
+        "symfony/http-client": "^8.1",
         "phpunit/phpunit": "^13.4",
         "vimeo/psalm": "^7.12",
         "php-cs-fixer/shim": "^3.88",
