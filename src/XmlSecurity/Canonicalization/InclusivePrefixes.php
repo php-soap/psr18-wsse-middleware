@@ -65,7 +65,7 @@ final class InclusivePrefixes
             foreach (xmlns_attributes_list($ancestor) as $declaration) {
                 // A declaration is either xmlns="…" for the default namespace or xmlns:prefix="…"; the
                 // PrefixList spells the former '#default'.
-                $prefixes[] = 'xmlns' === $declaration->nodeName ? '#default' : (string) $declaration->localName;
+                $prefixes[] = 'xmlns' === $declaration->nodeName ? '#default' : $declaration->localName;
             }
 
             // An ancestor built in memory carries no xmlns attribute yet, but serializing the document emits
@@ -73,7 +73,7 @@ final class InclusivePrefixes
             // derived before or after the round trip through the wire; for an ancestor parsed from the wire the
             // prefix is already declared above and dedupes away.
             if ($ancestor->prefix !== null) {
-                $prefixes[] = (string) $ancestor->prefix;
+                $prefixes[] = $ancestor->prefix;
             }
         }
 
