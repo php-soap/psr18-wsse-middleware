@@ -49,12 +49,12 @@
         "nyholm/psr7": "^1.5",
         "php-http/mock-client": "^1.5",
         "symfony/http-client": "^7.1",
-        "phpunit/phpunit": "~12.3",
-        "vimeo/psalm": "~7.12",
-        "php-cs-fixer/shim": "~3.88",
+        "phpunit/phpunit": "^12.3",
+        "vimeo/psalm": "^7.12",
+        "php-cs-fixer/shim": "^3.88",
         "php-standard-library/psalm-plugin": "^2.5",
         "carthage-software/mago": "^1.43",
-        "php-soap/psr18-attachments-middleware": "~0.12"
+        "php-soap/psr18-attachments-middleware": "^0.13"
     },
     "config": {
         "allow-plugins": {
