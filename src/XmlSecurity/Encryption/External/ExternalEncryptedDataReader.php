@@ -176,8 +176,16 @@ final class ExternalEncryptedDataReader
     private function mimeType(Element $encryptedDataElement, ExternalPart $part): string
     {
         $declared = (string) $encryptedDataElement->getAttribute('MimeType');
+        if ($declared === '') {
+            return $part->mimeType;
+        }
 
-        return $declared === '' ? $part->mimeType : $declared;
+        // The opened part carries this back as its Content-Type header.
+        if (strpbrk($declared, "\r\n\0") !== false) {
+            throw DecryptionFailed::withReason('The encrypted part declares a MimeType that cannot be a header value.');
+        }
+
+        return $declared;
     }
 
     /**

@@ -49,6 +49,16 @@ final class ExternalEncryptedDataReaderTest extends TestCase
         static::assertSame('application/x-original', $opened->mimeType);
     }
 
+    public function test_it_refuses_a_media_type_that_cannot_be_a_header_value(): void
+    {
+        // The opened part hands this value back as its Content-Type header, so a line break in it would
+        // smuggle a header of the sender's choosing into the attachment.
+        $this->expectException(DecryptionFailed::class);
+        $this->expectExceptionMessage('The encrypted part declares a MimeType that cannot be a header value.');
+
+        $this->read($this->element(mimeType: 'text/plain&#13;&#10;X-Injected: yes'), $this->parts());
+    }
+
     public function test_it_refuses_a_reference_naming_a_part_that_was_not_supplied(): void
     {
         // The parts supplied are real and usable; only the reference does not name one of them. Nothing else
