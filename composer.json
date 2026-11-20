@@ -19,7 +19,7 @@
         }
     ],
     "require": {
-        "php": "~8.4.21 || ~8.5.0",
+        "php": "~8.4.21 || ~8.5.0 || ~8.6.0",
         "composer-runtime-api": "^2.0",
         "ext-dom": "*",
         "ext-intl": "*",
@@ -50,12 +50,12 @@
         "nyholm/psr7": "^1.5",
         "php-http/mock-client": "^1.5",
         "symfony/http-client": "^7.1",
-        "phpunit/phpunit": "~12.3",
-        "vimeo/psalm": "~6.13",
-        "php-cs-fixer/shim": "~3.88",
-        "php-standard-library/psalm-plugin": "^2.4",
+        "phpunit/phpunit": "^12.3",
+        "vimeo/psalm": "^7.12",
+        "php-cs-fixer/shim": "^3.88",
+        "php-standard-library/psalm-plugin": "^2.5",
         "carthage-software/mago": "^1.43",
-        "php-soap/psr18-attachments-middleware": "~0.12"
+        "php-soap/psr18-attachments-middleware": "^0.13"
     },
     "config": {
         "allow-plugins": {

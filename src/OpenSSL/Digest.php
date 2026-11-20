@@ -21,6 +21,7 @@ final class Digest
     {
         // Psl\Hash\Algorithm is the typed source of the algorithm identity; native hash(binary: true) does
         // the raw-bytes finalization (Psl\Hash\hash only returns hex, but XML-DSig DigestValue needs raw).
+        /** @psalm-suppress WeakHash - SHA-1 and RIPEMD-160 stay supported because XML-DSig peers still sign with them. */
         return hash($this->algorithm($method)->value, $data, binary: true);
     }
 

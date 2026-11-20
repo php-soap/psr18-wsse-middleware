@@ -7,8 +7,7 @@ jobs:
         strategy:
             matrix:
                 operating-system: [ubuntu-latest]
-                php-versions: [ '8.4', '8.5' ]
-                composer-options: [ '--ignore-platform-req=php+' ]
+                php-versions: ['8.4', '8.5', '8.6']
             fail-fast: false
         name: PHP ${{ matrix.php-versions }} @ ${{ matrix.operating-system }}
         steps:
@@ -21,7 +20,7 @@ jobs:
                   tools: 'composer:v2'
                   extensions: pcov, mbstring, posix, dom, soap, intl, gmp, bcmath
             - name: Install dependencies
-              run: composer update --prefer-dist --no-progress --no-suggest ${{ matrix.composer-options }}
+              run: composer update --prefer-dist --no-progress --no-suggest
             - name: Run the tests
               # --fail-on-skipped: the crypto tests are gated to PHP >= 8.4.21 and skip silently below it, so a
               # CI run on a too-old patch release would report green having verified no signing or encryption.
