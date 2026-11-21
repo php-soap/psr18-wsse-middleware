@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace SoapTest\Psr18WsseMiddleware\Unit\OpenSSL\Parser;
 
 use OpenSSLAsymmetricKey;
-use phpseclib3\Math\BigInteger;
+use phpseclib4\Math\BigInteger;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psl\DateTime\Timestamp;

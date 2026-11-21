@@ -29,7 +29,7 @@ layering = [
 [guard.perimeter.layers]
 base   = ["@native", "Dom\\**", "Psl\\**", "Symfony\\Component\\Uid\\**"]
 xml    = ["VeeWee\\Xml\\**", "Soap\\Xml\\**"]
-crypto = ["phpseclib3\\**", "ParagonIE\\HiddenString\\**"]
+crypto = ["phpseclib4\\**", "ParagonIE\\HiddenString\\**"]
 http   = ["Psr\\Http\\**", "Http\\**", "Soap\\Psr18Transport\\**"]
 
 # Layer 0 — pure spec identifiers.

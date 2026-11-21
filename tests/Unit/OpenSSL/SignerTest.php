@@ -5,7 +5,7 @@ namespace SoapTest\Psr18WsseMiddleware\Unit\OpenSSL;
 
 use LogicException;
 use OpenSSLAsymmetricKey;
-use phpseclib3\Crypt\DSA;
+use phpseclib4\Crypt\DSA;
 use PHPUnit\Framework\TestCase;
 use Soap\Psr18WsseMiddleware\Algorithm\SignatureKeyKind;
 use Soap\Psr18WsseMiddleware\Algorithm\SignatureMethod;
